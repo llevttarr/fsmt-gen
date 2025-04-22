@@ -2,37 +2,81 @@
 App window and GUI manager
 '''
 
-import sys
+from PyQt5.QtWidgets import QOpenGLWidget, QMainWindow, QWidget, QStackedWidget, QVBoxLayout
+from OpenGL.GL import *
+from OpenGL.GLU import *
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QOpenGLWidget, QMainWindow, QWidget, QStackedWidget, QVBoxLayout, QPushButton
+from core.camera import Camera
+from core.enums import WindowState
+from render.world_manager import World
+from ui.interactable import MenuToConfigButton
 
-from enum import Enum
 
-class WindowState(Enum):
-    '''
-    Current state of the app window
-    '''
-    MAIN_MENU = 1
-    # this state occurs right before the world generation
-    GENERATOR_CONFIG = 2
-    GENERATOR_VIEW = 3
-
-#TODO
 class MainMenuWidget(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
         layout = QVBoxLayout()
+        start_button = MenuToConfigButton(main_window)
+        layout.addWidget(start_button)
         self.setLayout(layout)
 
-#TODO
 class GenerationViewWidget(QOpenGLWidget):
-    def __init__(self, main_window):
+    def __init__(self, main_window, seed=1):
         super().__init__()
         self.main_window = main_window
+        self.world = World(seed)
+        self.camera = Camera()
+    def initializeGL(self):
+        glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
+        glEnable(GL_DEPTH_TEST)
 
-#TODO
+    def resizeGL(self, w, h):
+        self.camera.apply(w, h)
+
+    def paintGL(self):
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glLoadIdentity()
+        self.camera.apply(self.width(), self.height())
+
+        for chunk in self.world.chunk_list:
+            for block in chunk.blocks:
+                self.draw_block(block)
+
+    def draw_block(self, block):
+        size = 2
+        half = size / 2
+        x, y, z = block.center_x, block.y, block.center_z
+
+        vertices = [
+            # bottom
+            (x - half, 0, z - half),
+            (x + half, 0, z - half),
+            (x + half, 0, z + half),
+            (x - half, 0, z + half),
+            #up
+            (x - half, y, z - half),
+            (x + half, y, z - half),
+            (x + half, y, z + half),
+            (x - half, y, z + half),
+        ]
+
+        faces = [
+            (0, 1, 2, 3),
+            (4, 5, 6, 7),
+            (0, 1, 5, 4),
+            (1, 2, 6, 5),
+            (2, 3, 7, 6),
+            (3, 0, 4, 7),
+        ]
+
+        glColor3f(0.4, 0.8, 0.2) #temp color
+        glBegin(GL_QUADS)
+        for face in faces:
+            for vertex in face:
+                glVertex3fv(vertices[vertex])
+        glEnd()
+
 class GenerationConfigWidget(QWidget):
     def __init__(self, main_window):
         super().__init__()
@@ -67,7 +111,7 @@ class Window(QMainWindow):
         '''
         match self.window_state:
             case WindowState.MAIN_MENU:
-                pass
+                self.widgets.setCurrentWidget(self.generator_view) #temp
             case WindowState.GENERATOR_CONFIG:
                 pass
             case WindowState.GENERATOR_VIEW:

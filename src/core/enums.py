@@ -1,4 +1,7 @@
 from enum import Enum
+class CameraState(Enum):
+    DEFAULT = 60.0
+    ZOOM = 30.0
 
 class Region(Enum):
     STEPPE = 1

@@ -13,6 +13,9 @@ from core.enums import WindowState, CameraState
 from render.world_manager import World
 from ui.interactable import MenuToConfigButton
 
+import random as rand
+import time
+import os
 
 class MainMenuWidget(QWidget):
     def __init__(self, main_window):
@@ -24,22 +27,33 @@ class MainMenuWidget(QWidget):
         self.setLayout(layout)
 
 class GenerationViewWidget(QOpenGLWidget):
-    def __init__(self, main_window, seed=1, fps=60):
+    def __init__(self, main_window, seed=1, fps=144):
         super().__init__()
         self.main_window = main_window
-        self.world = World(seed)
         self.camera = Camera()
+        self.seed = seed
 
         # mouse cursor management
         self.setMouseTracking(True)
         self.mouse_locked = True
         self.last_mouse_pos = QCursor.pos()
-
-        # frame upd
+        self.last_time = time.time()
+        self.fps_timer = QTimer()
+        self.fps_timer.timeout.connect(self.log_fps)
+        self.fps_timer.start(1000)
+        self.frame_count=0
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_w)
         self.timer.start(1000//fps)
 
+    def log_fps(self):
+        current_time = time.time()
+        elapsed = current_time - self.last_time
+        fps = self.frame_count / elapsed if elapsed > 0 else 0.0
+        print(f"fps: {fps:.2f}")
+        self.frame_count = 0
+        self.last_time = current_time
+        
     def update_w(self):
         if Qt.Key_C in self.camera.active_keys:
             # FIXME - after you zoom in once, this function gets called indefinitely
@@ -50,53 +64,30 @@ class GenerationViewWidget(QOpenGLWidget):
 
     def initializeGL(self):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
+        glEnable(GL_CULL_FACE)
+        glFrontFace(GL_CCW)
+        glCullFace(GL_FRONT)
         glEnable(GL_DEPTH_TEST)
+        print('starting to generate world')
+        try:
+            self.world = World(self.seed,4)
+            self.world.generate_mesh()
+        except Exception as e:
+            print('world generation went wrong: ',e)
+
 
     def resizeGL(self, w, h):
         self.camera.apply(w, h)
 
     def paintGL(self):
+        self.frame_count+=1
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
         self.camera.apply(self.width(), self.height())
-
-        for chunk in self.world.chunk_list:
-            for block in chunk.blocks:
-                self.draw_block(block)
-
-    def draw_block(self, block):
-        size = 2
-        half = size / 2
-        x, y, z = block.center_x, block.y, block.center_z
-
-        vertices = [
-            # bottom
-            (x - half, 0, z - half),
-            (x + half, 0, z - half),
-            (x + half, 0, z + half),
-            (x - half, 0, z + half),
-            #up
-            (x - half, y, z - half),
-            (x + half, y, z - half),
-            (x + half, y, z + half),
-            (x - half, y, z + half),
-        ]
-
-        faces = [
-            (0, 1, 2, 3),
-            (4, 5, 6, 7),
-            (0, 1, 5, 4),
-            (1, 2, 6, 5),
-            (2, 3, 7, 6),
-            (3, 0, 4, 7),
-        ]
-
-        glColor3f(0.4, 0.8, 0.2) #temp color
-        glBegin(GL_QUADS)
-        for face in faces:
-            for vertex in face:
-                glVertex3fv(vertices[vertex])
-        glEnd()
+        try:
+            self.world.render()
+        except Exception as e:
+            print('OpenGL render error: ',e)
 
     # Input events
     def mousePressEvent(self, event):

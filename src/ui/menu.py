@@ -70,7 +70,7 @@ class GenerationViewWidget(QOpenGLWidget):
         glEnable(GL_DEPTH_TEST)
         print('starting to generate world')
         try:
-            self.world = World(self.seed,4)
+            self.world = World(self.seed,n_rings=4)
             self.world.generate_mesh()
         except Exception as e:
             print('world generation went wrong: ',e)
@@ -86,6 +86,7 @@ class GenerationViewWidget(QOpenGLWidget):
         self.camera.apply(self.width(), self.height())
         try:
             self.world.render()
+            self.world.perf_tick()
         except Exception as e:
             print('OpenGL render error: ',e)
 

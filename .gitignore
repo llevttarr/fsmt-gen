@@ -172,3 +172,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+src/core/__pycache__/camera.cpython-313.pyc
+src/core/__pycache__/enums.cpython-313.pyc
+src/render/__pycache__/world_manager.cpython-313.pyc
+src/ui/__pycache__/menu.cpython-313.pyc

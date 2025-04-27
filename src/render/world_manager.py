@@ -32,7 +32,7 @@ class Block:
         if self.is_final:
             return
         s = self.k
-        diff = 0.001*((time.perf_counter()- self.time_created)**4)
+        diff = 0.003*((time.perf_counter()- self.time_created)**4)
         self.curr_y += s * diff
         if self.curr_y >= self.y:
             self.curr_y = self.y
@@ -44,9 +44,19 @@ class Chunk:
         #block size
         size = BLOCK_SIZE
 
-        self.vertex_buffer = None
-        self.element_buffer = None
-        self.vertex_array = None
+        self.vao = None
+        # dynamic
+        self.dyn_vbo = None
+        self.dyn_ebo = None
+        self.dyn_vlist = []
+        self.dyn_ilist=[]
+        self.dyn_v_count = 0
+        # static
+        self.st_vbo = None
+        self.st_ebo = None
+        self.st_vlist = []
+        self.st_ilist=[]
+        self.st_v_count = 0
         #every chunk has 9 blocks
         for dx in [-1, 0, 1]:
             for dz in [-1, 0, 1]:
@@ -62,8 +72,12 @@ class Chunk:
 
     def get_v_color(self, y):
         return [0.5, (y/30), 0.5] #temp
-    def render_block(self,block:Block):
-        x,y,z = block.center_x,block.curr_y,block.center_z
+    def render_block(self,block:Block,is_dynamic):
+        x,z = block.center_x,block.center_z
+        if is_dynamic:
+            y = block.curr_y
+        else:
+            y = block.y
         v_list = [
             [x-1,0,z-1],
             [x+1,0,z-1],
@@ -86,58 +100,99 @@ class Chunk:
 
         v_c = self.get_v_color(y)
         for v in v_list:
-            self.vertex_list.extend(v+v_c)
+            if is_dynamic:
+                self.dyn_vlist.extend(v+v_c)
+            else:
+                self.st_vlist.extend(v+v_c)
         for f in f_list:
-            self.i_list.extend(
-                [
-                    self.v_count + f[0],
-                    self.v_count + f[1],
-                    self.v_count + f[2],
-                    self.v_count + f[0],
-                    self.v_count + f[2],
-                    self.v_count + f[3],
-                ]
-            )
-        self.v_count+=8
+            if is_dynamic:
+                self.dyn_ilist.extend(
+                    [
+                        self.dyn_v_count + f[0],
+                        self.dyn_v_count + f[1],
+                        self.dyn_v_count + f[2],
+                        self.dyn_v_count + f[0],
+                        self.dyn_v_count + f[2],
+                        self.dyn_v_count + f[3],
+                    ]
+                )
+            else:
+                self.st_vlist.extend(
+                    [
+                        self.st_v_count + f[0],
+                        self.st_v_count + f[1],
+                        self.st_v_count + f[2],
+                        self.st_v_count + f[0],
+                        self.st_v_count + f[2],
+                        self.st_v_count + f[3],
+                    ]
+                )
+        if is_dynamic:
+            self.dyn_v_count+=8
+        else:
+            self.st_v_count+=8
     def update(self):
         flag = False
+        finalized_blocks = []
         for block in self.blocks:
             if not block.is_final:
                 block.update()
+                if block.is_final:
+                    finalized_blocks.append(block)
                 flag = True
+        for block in finalized_blocks:
+            self.render_block(block,False)
+            self.blocks.remove(block)
         if flag:
             self.rebuild()
+    def rebuild(self):
+        self.dyn_ilist = []
+        self.dyn_vlist = []
+        self.dyn_v_count = 0
+        for block in self.blocks:
+            self.render_block(block, True)
+        self.send_gpu()
+
     def send_gpu(self):
-        if self.vertex_array is None:
-            self.vertex_array = glGenVertexArrays(1)
-            self.vertex_buffer = glGenBuffers(1)
-            self.element_buffer = glGenBuffers(1)
-        glBindVertexArray(self.vertex_array)
-        glBindBuffer(GL_ARRAY_BUFFER, self.vertex_buffer)
-        glBufferData(GL_ARRAY_BUFFER, np.array(self.vertex_list, dtype=np.float32).nbytes, np.array(self.vertex_list, dtype=np.float32), GL_DYNAMIC_DRAW)
-        
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.element_buffer)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, np.array(self.i_list, dtype=np.uint32).nbytes, np.array(self.i_list, dtype=np.uint32), GL_DYNAMIC_DRAW)
-    
+        if self.vao is None:
+            self.vao = glGenVertexArrays(1)
+            self.dyn_vbo = glGenBuffers(1)
+            self.dyn_ebo = glGenBuffers(1)
+            self.st_vbo = glGenBuffers(1)
+            self.st_ebo = glGenBuffers(1)
+
+        glBindVertexArray(self.vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.st_vbo)
+        st_vlist_np = np.array(self.st_vlist, dtype=np.float32)
+        glBufferData(GL_ARRAY_BUFFER, st_vlist_np.nbytes, st_vlist_np, GL_STATIC_DRAW)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.st_ebo)
+        st_ilist_np = np.array(self.st_ilist, dtype=np.uint32)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, st_ilist_np.nbytes, st_ilist_np, GL_STATIC_DRAW)
+
+        glBindBuffer(GL_ARRAY_BUFFER, self.dyn_vbo)
+        dyn_vlist_np = np.array(self.dyn_vlist, dtype=np.float32)
+        glBufferData(GL_ARRAY_BUFFER, dyn_vlist_np.nbytes, dyn_vlist_np, GL_DYNAMIC_DRAW)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.dyn_ebo)
+        dyn_ilist_np = np.array(self.dyn_ilist, dtype=np.uint32)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, dyn_ilist_np.nbytes, dyn_ilist_np, GL_DYNAMIC_DRAW)
+
         glEnableClientState(GL_VERTEX_ARRAY)
         glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
-
         glEnableClientState(GL_COLOR_ARRAY)
         glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
 
         glBindVertexArray(0)
 
-    def rebuild(self):
-        self.vertex_list=[]
-        self.i_list=[]
-        self.v_count = 0
-        for block in self.blocks:
-            self.render_block(block)
-        self.send_gpu()
-
     def render(self):
-        glBindVertexArray(self.vertex_array)
-        glDrawElements(GL_TRIANGLES, len(self.i_list), GL_UNSIGNED_INT, None)
+        glBindVertexArray(self.vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.st_vbo)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.st_ebo)
+        glDrawElements(GL_TRIANGLES, len(self.st_ilist), GL_UNSIGNED_INT, None)
+
+        glBindBuffer(GL_ARRAY_BUFFER, self.dyn_vbo)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.dyn_ebo)
+        glDrawElements(GL_TRIANGLES, len(self.dyn_ilist), GL_UNSIGNED_INT, None)
+
         glBindVertexArray(0)
 
 
@@ -184,8 +239,9 @@ class World:
         chunk = Chunk(self.seed, center_x=x, center_z=z)
         self.chunk_list.append(chunk)
     def perf_tick(self):
-        if time.perf_counter() - self.last_tick< (1/15):
+        if time.perf_counter() - self.last_tick< (1/20):
             return
+        self.update()
         self.ticks_elapsed+=1
         self.last_tick = time.perf_counter()
         if self.ticks_elapsed%self.rate==0 and len(self.chunk_scheduled)!=0:

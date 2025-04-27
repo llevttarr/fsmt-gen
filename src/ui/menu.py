@@ -87,6 +87,7 @@ class GenerationViewWidget(QOpenGLWidget):
         try:
             self.world.render()
             self.world.perf_tick()
+            self.world.update()
         except Exception as e:
             print('OpenGL render error: ',e)
 

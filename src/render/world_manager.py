@@ -12,10 +12,13 @@ from OpenGL.GLU import *
 import random as rand
 import numpy as np
 import time
+BLOCK_SIZE = 2
+
 class Block:
     def __init__(self, center_x, y, center_z, region: Region, obj=None):
         self.center_x = center_x
         self.y = y
+        self.curr_y = y-5 # starting y for a smooth animation
         self.center_z = center_z
         self.region = region
         self.obj = obj
@@ -24,7 +27,11 @@ class Chunk:
     def __init__(self, seed, center_x=0, center_z=0):
         self.blocks = []
         #block size
-        size = 2
+        size = BLOCK_SIZE
+
+        self.vertex_buffer = None
+        self.element_buffer = None
+        self.vertex_array = None
         #every chunk has 9 blocks
         for dx in [-1, 0, 1]:
             for dz in [-1, 0, 1]:
@@ -36,58 +43,10 @@ class Chunk:
                 if can_place((x,y,z),seed):
                     obj = None #temp
                 self.blocks.append(Block(x, y, z, rg))
-
-class World:
-    def __init__(self, seed,shader=None, n_rings=2, generation_rate=4, obj_intensity=0.5, height_intensity=0.5): #generation_rate is measured in ticks
-        self.seed = seed
-        if n_rings < 1:
-            raise ValueError("Number of rings cannot be less than 1")
-        self.n_rings = n_rings
-        # self.shader = shader
-        self.last_tick = time.perf_counter()
-        self.ticks_elapsed = 1
-        self.rate = generation_rate
-        if generation_rate < 1:
-            raise ValueError("Generation rate cannot be less than 1")
-
-        self.chunk_scheduled = []
-        self.chunk_list = []
-        self.vertex_list = []
-        self.v_count = 0
-        self.i_list = []
-        self.vertex_buffer = None
-        self.element_buffer = None
-        self.vertex_array = None
-        # self.view_type = ObjectViewType.DEFAULT
+        self.rebuild()
 
     def get_v_color(self, y):
         return [0.5, (y/30), 0.5] #temp
-    def generate_mesh(self):
-        '''
-        Generates a list of chunks to implement
-        '''
-        self.chunk_scheduled.append((0,0))
-        curr_ring = 1
-        while curr_ring < self.n_rings:
-            r = 6*curr_ring
-            for x in range(-r,r+1,6):
-                self.chunk_scheduled.append((x, r))
-                self.chunk_scheduled.append((x, -r))
-            for z in range(-r+6,r-5,6):
-                self.chunk_scheduled.append((r, z))
-                self.chunk_scheduled.append((-r, z))
-            curr_ring+=1
-
-    def generate_chunk(self):
-        if not self.chunk_scheduled:
-            return
-        x,z=self.chunk_scheduled.pop(0)
-        print(f'generating chunk at {x}, {z}')
-        chunk = Chunk(self.seed, center_x=x, center_z=z)
-        self.chunk_list.append(chunk)
-        for block in chunk.blocks:
-            self.render_block(block)
-
     def render_block(self,block:Block):
         x,y,z = block.center_x,block.y,block.center_z
         v_list = [
@@ -125,7 +84,80 @@ class World:
                 ]
             )
         self.v_count+=8
+    def send_gpu(self):
+        if self.vertex_array is None:
+            self.vertex_array = glGenVertexArrays(1)
+            self.vertex_buffer = glGenBuffers(1)
+            self.element_buffer = glGenBuffers(1)
+        glBindVertexArray(self.vertex_array)
+        glBindBuffer(GL_ARRAY_BUFFER, self.vertex_buffer)
+        glBufferData(GL_ARRAY_BUFFER, np.array(self.vertex_list, dtype=np.float32).nbytes, np.array(self.vertex_list, dtype=np.float32), GL_STATIC_DRAW)
+        
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.element_buffer)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, np.array(self.i_list, dtype=np.uint32).nbytes, np.array(self.i_list, dtype=np.uint32), GL_STATIC_DRAW)
+    
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
 
+        glEnableClientState(GL_COLOR_ARRAY)
+        glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
+
+        glBindVertexArray(0)
+
+    def rebuild(self):
+        self.vertex_list=[]
+        self.i_list=[]
+        self.v_count = 0
+        for block in self.blocks:
+            self.render_block(block)
+        self.send_gpu()
+
+    def render(self):
+        glBindVertexArray(self.vertex_array)
+        glDrawElements(GL_TRIANGLES, len(self.i_list), GL_UNSIGNED_INT, None)
+        glBindVertexArray(0)
+
+
+class World:
+    def __init__(self, seed,shader=None, n_rings=2, generation_rate=4, obj_intensity=0.5, height_intensity=0.5): #generation_rate is measured in ticks
+        self.seed = seed
+        if n_rings < 1:
+            raise ValueError("Number of rings cannot be less than 1")
+        self.n_rings = n_rings
+        # self.shader = shader
+        self.last_tick = time.perf_counter()
+        self.ticks_elapsed = 1
+        self.rate = generation_rate
+        if generation_rate < 1:
+            raise ValueError("Generation rate cannot be less than 1")
+
+        self.chunk_scheduled = []
+        self.chunk_list = []
+        # self.view_type = ObjectViewType.DEFAULT
+
+    def generate_mesh(self):
+        '''
+        Generates a list of chunks to implement
+        '''
+        self.chunk_scheduled.append((0,0))
+        curr_ring = 1
+        while curr_ring < self.n_rings:
+            r = 6*curr_ring
+            for x in range(-r,r+1,6):
+                self.chunk_scheduled.append((x, r))
+                self.chunk_scheduled.append((x, -r))
+            for z in range(-r+6,r-5,6):
+                self.chunk_scheduled.append((r, z))
+                self.chunk_scheduled.append((-r, z))
+            curr_ring+=1
+
+    def generate_chunk(self):
+        if not self.chunk_scheduled:
+            return
+        x,z=self.chunk_scheduled.pop(0)
+        print(f'generating chunk at {x}, {z}')
+        chunk = Chunk(self.seed, center_x=x, center_z=z)
+        self.chunk_list.append(chunk)
     def perf_tick(self):
         if time.perf_counter() - self.last_tick< (1/15):
             return
@@ -133,36 +165,6 @@ class World:
         self.last_tick = time.perf_counter()
         if self.ticks_elapsed%self.rate==0 and len(self.chunk_scheduled)!=0:
             self.generate_chunk()
-            v_l=np.array(self.vertex_list,dtype=np.float32)
-            i_l=np.array(self.i_list,dtype=np.uint32)
-            self.send_gpu(v_l,i_l)
-
-    def send_gpu(self,vertex_list,i_list):
-        if self.vertex_buffer is None:
-            self.vertex_array = glGenVertexArrays(1)
-            self.vertex_buffer = glGenBuffers(1)
-            self.element_buffer = glGenBuffers(1)
-
-        glBindVertexArray(self.vertex_array)
-
-        glBindBuffer(GL_ARRAY_BUFFER, self.vertex_buffer)
-        glBufferData(GL_ARRAY_BUFFER, vertex_list.nbytes, vertex_list, GL_STATIC_DRAW)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.element_buffer)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, i_list.nbytes, i_list, GL_STATIC_DRAW)
-
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
-        glEnableClientState(GL_COLOR_ARRAY)
-        glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
-
-        glBindVertexArray(0)
-
     def render(self):
-        if self.vertex_buffer is None:
-            self.vertex_array = glGenVertexArrays(1)
-            self.vertex_buffer = glGenBuffers(1)
-            self.element_buffer = glGenBuffers(1)
-        glBindVertexArray(self.vertex_array)
-        glUseProgram(0)
-        glDrawElements(GL_TRIANGLES, len(self.i_list), GL_UNSIGNED_INT, None)
-        glBindVertexArray(0)
+        for chunk in self.chunk_list:
+            chunk.render()

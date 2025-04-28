@@ -1,8 +1,7 @@
 '''
 App window and GUI manager
 '''
-
-from PyQt5.QtWidgets import QOpenGLWidget, QMainWindow, QWidget, QStackedWidget, QVBoxLayout
+from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QPoint
 from PyQt5.QtGui import QCursor
 from OpenGL.GL import *
@@ -11,11 +10,14 @@ from OpenGL.GLU import *
 from core.camera import Camera
 from core.enums import WindowState, CameraState
 from render.world_manager import World
-from ui.interactable import MenuToConfigButton
+from ui.interactable import MenuToConfigButton, Button, InteractableSlider, ObjIntensitySlider
+
 
 import random as rand
 import time
 import os
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QSplitter
 
 class MainMenuWidget(QWidget):
     def __init__(self, main_window):
@@ -134,6 +136,52 @@ class GenerationConfigWidget(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+class GenerationSidebar(QWidget):
+
+    def __init__(self, main_window):
+        super().__init__()
+        self.setMaximumHeight(200)
+        self.main_window = main_window
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+
+        self.input_field = QLabel("Enter Seed:")
+        self.seed_input = QLineEdit()
+        self.generate_button = Button("Generate", self.generate_action)
+
+        self.parameters_widget = QWidget()
+        self.parameters_layout = QHBoxLayout(self.parameters_widget)
+
+        self.obj_intensity = InteractableSlider(self, "Object Intensity", (0, 100), "decimal")
+        self.rings = InteractableSlider(self, "Rings", (1, 10))
+        self.generation_rate = InteractableSlider(self, "Generation Rate", (1, 10))
+        self.height_intensity = InteractableSlider(self, "Height Intensity", (0, 100), "decimal")
+
+        self.parameters_layout.addWidget(self.obj_intensity)
+        self.parameters_layout.addWidget(self.rings)
+        self.parameters_layout.addWidget(self.generation_rate)
+        self.parameters_layout.addWidget(self.height_intensity)
+
+        self.content_layout.addWidget(self.seed_input)
+        self.content_layout.addWidget(self.generate_button)
+
+        self.main_layout.addWidget(self.content_widget)
+        self.main_layout.addWidget(self.parameters_widget)
+
+    def generate_action(self):
+        try:
+            seed = self.seed_input.text()
+            if seed:
+                print(f"generated {int(seed)}")
+            else:
+                print(f"parameter: {self.obj_intensity.display.toPlainText()}")
+        except ValueError:
+            print("Invalid seed value.")
+
+
 class Window(QMainWindow):
     '''
     App window object
@@ -141,27 +189,41 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Terrain Generator")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1000, 760)
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        self.main_layout = QVBoxLayout(central_widget)
+
         self.widgets = QStackedWidget()
-        self.setCentralWidget(self.widgets)
-
-        self.window_state = WindowState.MAIN_MENU # the window will always start in main menu
-        # initializing widgets
         self.main_menu = MainMenuWidget(self)
-        self.widgets.addWidget(self.main_menu)
-        self.widgets.setCurrentWidget(self.main_menu)
-
         self.generator_config = GenerationConfigWidget(self)
-        self.widgets.addWidget(self.generator_config)
         self.generator_view = GenerationViewWidget(self)
+
+        self.widgets.addWidget(self.main_menu)
+        self.widgets.addWidget(self.generator_config)
         self.widgets.addWidget(self.generator_view)
+        self.widgets.setCurrentWidget(self.main_menu)
+        self.sidebar = GenerationSidebar(self)
+
+        self.splitter = QSplitter()
+        self.splitter.setOrientation(Qt.Vertical)
+        self.splitter.setSizes([560, 200])
+        self.main_layout.addWidget(self.splitter)
+
+        self.splitter.addWidget(self.sidebar)
+        self.splitter.addWidget(self.widgets)
+
+        self.window_state = WindowState.MAIN_MENU
+
+
     def switch_state(self):
         '''
         Changes the current window state
         '''
         match self.window_state:
             case WindowState.MAIN_MENU:
-                self.widgets.setCurrentWidget(self.generator_view) #temp
+                self.widgets.setCurrentWidget(self.generator_view)  # temp
             case WindowState.GENERATOR_CONFIG:
                 pass
             case WindowState.GENERATOR_VIEW:

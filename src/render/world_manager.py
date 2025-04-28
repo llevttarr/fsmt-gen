@@ -1,10 +1,14 @@
 '''
 Environment management utility
 '''
+import sys
+import os
+
 from core.enums import Region
 from core.terrain_gen import get_y
 from core.region_gen import get_region
 from core.object_gen import can_place
+from render.object_manager import Object3D
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -12,6 +16,9 @@ from OpenGL.GLU import *
 import random as rand
 import numpy as np
 import time
+
+# sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 BLOCK_SIZE = 2
 
 class Block:
@@ -36,11 +43,12 @@ class Block:
         self.curr_y += s * diff
         if self.curr_y >= self.y:
             self.curr_y = self.y
-            self.appearing = False
+            self.is_final = True
 
 class Chunk:
     def __init__(self, seed, center_x=0, center_z=0):
         self.blocks = []
+        self.blocks_q = []
         #block size
         size = BLOCK_SIZE
 
@@ -66,8 +74,16 @@ class Chunk:
                 rg = get_region((x,z),seed)
                 obj = None
                 if can_place((x,y,z),seed):
-                    obj = None #temp
-                self.blocks.append(Block(x, y, z, rg))
+                    obj = Object3D(os.path.abspath(os.path.join(
+                            os.path.dirname(__file__),
+                            "..","..", 
+                            "static","assets","test_obj.obj"
+                        )
+                        ))
+                    obj.translate(x,y,z)
+                block = Block(x, y, z, rg, obj)
+                self.blocks.append(block)
+                self.blocks_q.append(block)
         self.rebuild()
 
     def get_v_color(self, y):
@@ -90,12 +106,12 @@ class Chunk:
             [x-1,y,z+1],
         ]
         f_list = [
-            (3, 2, 1, 0), 
-            (4, 5, 6, 7),
-            (0, 1, 5, 4),
-            (1, 2, 6, 5),
-            (2, 3, 7, 6),
-            (3, 0, 4, 7)
+            (0, 1, 2, 3),  
+            (7, 6, 5, 4),  
+            (4, 5, 1, 0),  
+            (5, 6, 2, 1),  
+            (6, 7, 3, 2),  
+            (7, 4, 0, 3)   
         ]
 
         v_c = self.get_v_color(y)
@@ -117,7 +133,7 @@ class Chunk:
                     ]
                 )
             else:
-                self.st_vlist.extend(
+                self.st_ilist.extend(
                     [
                         self.st_v_count + f[0],
                         self.st_v_count + f[1],
@@ -127,14 +143,28 @@ class Chunk:
                         self.st_v_count + f[3],
                     ]
                 )
+
         if is_dynamic:
             self.dyn_v_count+=8
         else:
             self.st_v_count+=8
+        if block.obj is not None:
+            if is_dynamic:
+                dy = y - block.obj.y
+                block.obj.translate(0,dy,0)
+                o_v,o_vlist,o_ilist = block.obj.get_mesh(self.dyn_v_count,[0.3, 0.1, 0.3])
+                self.dyn_v_count+=o_v
+                self.dyn_ilist.extend(o_ilist)
+                self.dyn_vlist.extend(o_vlist)
+            else:
+                o_v,o_vlist,o_ilist = block.obj.get_mesh(self.st_v_count,[0.3, 0.1, 0.3])
+                self.st_v_count+=o_v
+                self.st_ilist.extend(o_ilist)
+                self.st_vlist.extend(o_vlist)
     def update(self):
         flag = False
         finalized_blocks = []
-        for block in self.blocks:
+        for block in self.blocks_q:
             if not block.is_final:
                 block.update()
                 if block.is_final:
@@ -142,15 +172,15 @@ class Chunk:
                 flag = True
         for block in finalized_blocks:
             self.render_block(block,False)
-            self.blocks.remove(block)
+            self.blocks_q.remove(block)
         if flag:
             self.rebuild()
     def rebuild(self):
         self.dyn_ilist = []
         self.dyn_vlist = []
         self.dyn_v_count = 0
-        for block in self.blocks:
-            self.render_block(block, True)
+        for block in self.blocks_q:
+            self.render_block(block, True)    
         self.send_gpu()
 
     def send_gpu(self):
@@ -213,6 +243,7 @@ class World:
         self.chunk_list = []
         # self.view_type = ObjectViewType.DEFAULT
 
+        self.selected_block = None
     def generate_mesh(self):
         '''
         Generates a list of chunks to implement
@@ -249,3 +280,8 @@ class World:
     def render(self):
         for chunk in self.chunk_list:
             chunk.render()
+# # # # # # # # #
+    def ray_intersect(self,ray_origin,ray_dir):
+        pass
+    def select_block(self, ray_origin,ray_dir):
+        pass

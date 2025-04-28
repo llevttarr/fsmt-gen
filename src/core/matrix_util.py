@@ -32,7 +32,7 @@ class Vector:
         return np.linalg.norm(self.data)
 
     def normalize(self):
-        norm = self.length()
+        norm = len(self)
         return Vector(*(self.data / norm)) if norm != 0 else self
 
 class Vector3D(Vector):

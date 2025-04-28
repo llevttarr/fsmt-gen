@@ -64,9 +64,9 @@ class GenerationViewWidget(QOpenGLWidget):
 
     def initializeGL(self):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
-        glEnable(GL_CULL_FACE)
+        # glEnable(GL_CULL_FACE)
         glFrontFace(GL_CCW)
-        glCullFace(GL_FRONT)
+        glCullFace(GL_BACK)
         glEnable(GL_DEPTH_TEST)
         print('starting to generate world')
         try:
@@ -89,10 +89,13 @@ class GenerationViewWidget(QOpenGLWidget):
             self.world.perf_tick()
         except Exception as e:
             print('OpenGL render error: ',e)
-
     # Input events
     def mousePressEvent(self, event):
-        pass
+        if event.button() == Qt.LeftButton:
+            x,y=event.x(),event.y()
+        if event.button() == Qt.RightButton:
+            pass # 
+
     def mouseReleaseEvent(self, event):
         pass
 
@@ -127,6 +130,9 @@ class GenerationViewWidget(QOpenGLWidget):
         if self.mouse_locked:
             self.setCursor(Qt.BlankCursor)
             QCursor.setPos(self.mapToGlobal(self.rect().center()))
+    # # # # #
+    def get_mouse_ray(self, x, y):
+        pass
 
 class GenerationConfigWidget(QWidget):
     def __init__(self, main_window):

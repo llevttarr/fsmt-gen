@@ -145,15 +145,16 @@ class GenerationSidebar(QWidget):
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
-        self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout(self.content_widget)
-
         self.input_field = QLabel("Enter Seed:")
         self.seed_input = QLineEdit()
         self.generate_button = Button("Generate", self.generate_action)
 
         self.parameters_widget = QWidget()
         self.parameters_layout = QHBoxLayout(self.parameters_widget)
+        
+        self.generate_widget = QWidget()
+        self.seed_generate = QVBoxLayout(self.generate_widget)
+        self.generate_widget.setFixedWidth(220)
 
         self.obj_intensity = InteractableSlider(self, "Object Intensity", (0, 100), "decimal")
         self.rings = InteractableSlider(self, "Rings", (1, 10))
@@ -165,10 +166,12 @@ class GenerationSidebar(QWidget):
         self.parameters_layout.addWidget(self.generation_rate)
         self.parameters_layout.addWidget(self.height_intensity)
 
-        self.content_layout.addWidget(self.seed_input)
-        self.content_layout.addWidget(self.generate_button)
+        self.seed_generate.addWidget(self.input_field)
+        self.seed_generate.addWidget(self.seed_input)
+        self.seed_generate.addWidget(self.generate_button)
 
-        self.main_layout.addWidget(self.content_widget)
+
+        self.main_layout.addWidget(self.generate_widget)
         self.main_layout.addWidget(self.parameters_widget)
 
     def generate_action(self):
@@ -177,7 +180,13 @@ class GenerationSidebar(QWidget):
             if seed:
                 print(f"generated {int(seed)}")
             else:
-                print(f"parameter: {self.obj_intensity.display.toPlainText()}")
+                values = [
+                    self.obj_intensity.display.toPlainText(),
+                    self.rings.display.toPlainText(),
+                    self.generation_rate.display.toPlainText(),
+                    self.height_intensity.display.toPlainText()
+                ]
+                print(values)
         except ValueError:
             print("Invalid seed value.")
 

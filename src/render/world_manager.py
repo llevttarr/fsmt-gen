@@ -8,6 +8,8 @@ from core.enums import Region
 from core.terrain_gen import get_y
 from core.region_gen import get_region
 from core.object_gen import can_place
+from core.matrix_util import Vector3D,Vector4D,Matrix3D,Matrix4D
+
 from render.object_manager import Object3D
 
 from OpenGL.GL import *
@@ -65,6 +67,8 @@ class Chunk:
         self.st_vlist = []
         self.st_ilist=[]
         self.st_v_count = 0
+
+        self.world = None
         #every chunk has 9 blocks
         for dx in [-1, 0, 1]:
             for dz in [-1, 0, 1]:
@@ -113,8 +117,12 @@ class Chunk:
             (6, 7, 3, 2),  
             (7, 4, 0, 3)   
         ]
-
-        v_c = self.get_v_color(y)
+        if self.world is not None \
+        and self.world.selected_block is not None \
+        and (self.world.selected_block.center_x==block.center_x and self.world.selected_block.center_z==block.center_z):
+            v_c=[1.0,1.0,1.0]
+        else:
+            v_c = self.get_v_color(y)
         for v in v_list:
             if is_dynamic:
                 self.dyn_vlist.extend(v+v_c)
@@ -182,6 +190,10 @@ class Chunk:
         for block in self.blocks_q:
             self.render_block(block, True)    
         self.send_gpu()
+        # print(f'static v {len(self.st_vlist)}')
+        # print(f'static i {len(self.st_ilist)}')
+        # print(f'dyn v {len(self.dyn_vlist)}')
+        # print(f'dyn i {len(self.dyn_ilist)}')
 
     def send_gpu(self):
         if self.vao is None:
@@ -244,6 +256,8 @@ class World:
         # self.view_type = ObjectViewType.DEFAULT
 
         self.selected_block = None
+        self.selected_chunk = None
+        self.prev_selected_chunk = None # saving it so deselection is possible
     def generate_mesh(self):
         '''
         Generates a list of chunks to implement
@@ -262,12 +276,19 @@ class World:
     def update(self):
         for chunk in self.chunk_list:
             chunk.update()
+        if self.selected_chunk:
+            self.selected_chunk.rebuild()
+            self.selected_chunk = None
+        if self.prev_selected_chunk:
+            self.prev_selected_chunk.rebuild()
+            self.selected_chunk = None
     def generate_chunk(self):
         if not self.chunk_scheduled:
             return
         x,z=self.chunk_scheduled.pop(0)
         print(f'generating chunk at {x}, {z}')
         chunk = Chunk(self.seed, center_x=x, center_z=z)
+        chunk.world = self
         self.chunk_list.append(chunk)
     def perf_tick(self):
         if time.perf_counter() - self.last_tick< (1/20):
@@ -280,8 +301,41 @@ class World:
     def render(self):
         for chunk in self.chunk_list:
             chunk.render()
-# # # # # # # # #
-    def ray_intersect(self,ray_origin,ray_dir):
-        pass
-    def select_block(self, ray_origin,ray_dir):
-        pass
+# # # # # # #
+    def intersect_check(self, ray_origin, ray_dir, bound_0, bound_max):
+        t_0=(bound_0.data-ray_origin)/ray_dir
+        t_1=(bound_max.data-ray_origin)/ray_dir
+        t_0=Vector3D(t_0[0], t_0[1],t_0[2])
+        t_1=Vector3D(t_1[0], t_1[1],t_1[2])
+
+        t_min = np.minimum(t_0.data, t_1.data)
+        t_max = np.maximum(t_0.data, t_1.data)
+
+        t_enter = np.max(t_min)
+        t_exit = np.min(t_max)
+        if t_enter > t_exit or t_exit < 0:
+            return False, None
+        return True,t_enter
+    def select_block(self, ray_origin, ray_dir):
+        print(f"casting ray <{ray_origin} in dir: {ray_dir}>")
+        closest_b,closest_c,closest_t=None,None,float('inf')
+        for chunk in self.chunk_list:
+            for block in chunk.blocks:
+                bound_0=Vector3D(block.center_x-1,0,block.center_z-1)
+                bound_max=Vector3D(block.center_x+1,block.curr_y,block.center_z+1)
+                hit_occured,t_hit=self.intersect_check(ray_origin,ray_dir,bound_0,bound_max)
+                if hit_occured and t_hit<closest_t:
+                    closest_t,closest_b=t_hit,block
+                    closest_c = chunk
+        if closest_b is not None:
+            print(f'selected block at {closest_b.center_x}, {closest_b.curr_y}, {closest_b.center_z}')
+            print(f'region of the block: {closest_b.region}')
+            print(f'has object: {closest_b.obj is None}')
+            self.selected_chunk = closest_c
+            self.selected_block = closest_b
+        else:
+            print('removing selection')
+            if self.selected_chunk is not None:
+                self.prev_selected_chunk = self.selected_chunk
+                self.selected_chunk = None
+                self.selected_block = None

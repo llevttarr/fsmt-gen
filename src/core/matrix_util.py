@@ -27,13 +27,13 @@ class Vector:
 
     def __repr__(self):
         return f"Vector{len(self.data)}D({', '.join(map(str, self.data))})"
-
-    def __len__(self):
+    @property
+    def length(self):
         return np.linalg.norm(self.data)
 
     def normalize(self):
-        norm = len(self)
-        return Vector(*(self.data / norm)) if norm != 0 else self
+        norm = self.length
+        return self.__class__(*(self.data / norm)) if norm != 0 else self
 
 class Vector3D(Vector):
     def __init__(self, vx, vy, vz):
@@ -59,7 +59,8 @@ class Matrix:
 
     def transpose(self):
         return self.__class__(self.data.T.flatten())
-
+    def inverse(self):
+        return self.__class__(np.linalg.inv(self.data))
 class Matrix3D(Matrix):
     size = 3
     def __init__(self, *args):

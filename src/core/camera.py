@@ -1,7 +1,10 @@
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from PyQt5.QtCore import Qt, QTimer, QPoint
+
 from core.enums import CameraState
+from core.matrix_util import Matrix3D, Matrix4D, Vector3D, Vector4D
+
 import math
 import time
 class Camera:
@@ -13,10 +16,64 @@ class Camera:
         self.speed=0.05
         self.fps = fps
         self.sensitivity=0.1
+
         self.active_keys={}
         self.key_press_time={}
         self.last_moved = time.time()
+
         self.move_ticks = 0
+        # self.aspect_ratio = 1.0
+        self.near_plane = 0.1
+        self.far_plane = 1000.0
+    @property
+    def right_vec(self):
+        return Vector3D(
+            math.sin(math.radians(self.yaw-90)),
+            0,
+            -math.cos(math.radians(self.yaw-90))
+        )
+    @property
+    def up_vec(self):
+        dir_vec = self.get_dir()
+        right = self.right_vec
+        cross = Vector3D(
+            right[1] * dir_vec[2] - right[2] * dir_vec[1],
+            right[2] * dir_vec[0] - right[0] * dir_vec[2],
+            right[0] * dir_vec[1] - right[1] * dir_vec[0]
+        )
+        
+        length = cross.length
+        if length <= 0:
+            return Vector3D(0, 1, 0)
+        
+        return cross.normalize()
+    def proj_matr(self, width, height):
+        aspect = width / height
+        fov_rad = math.radians(self.fov)
+        f = 1.0 / math.tan(fov_rad / 2)
+        
+        return Matrix4D(
+            f / aspect, 0, 0, 0,
+            0, f, 0, 0,
+            0, 0, (self.far_plane + self.near_plane) / (self.near_plane - self.far_plane), (2 * self.far_plane * self.near_plane) / (self.near_plane - self.far_plane),
+            0, 0, -1.0, 0
+        )
+    
+    def view_matr(self):
+        dir,right,up=self.get_dir(),self.right_vec,self.up_vec
+        rotate_matr=Matrix4D(
+            right[0], right[1], right[2],0,
+            up[0], up[1], up[2],0,
+            -dir[0], -dir[1], -dir[2],0,
+            0,0,0,1
+        )
+        translate_matr=Matrix4D(
+            1,0,0,-self.pos[0],
+            0,1,0,-self.pos[1],
+            0,0,1,-self.pos[2],
+            0,0,0,1
+        )
+        return rotate_matr @ translate_matr
     def toggle_mode(self, state):
         if self.state == state:
             self.state = CameraState.DEFAULT
@@ -35,6 +92,9 @@ class Camera:
         if is_pressed:
             self.key_press_time[key] = time.time()
     def apply(self, width, height):
+        '''
+        DEPRECATED
+        '''
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         gluPerspective(self.fov, width / height, 0.1, 1000.0)
@@ -48,31 +108,31 @@ class Camera:
     def move(self):
         dir_matr=[0,0,0]
         # up/down
-        up_matr=[0,1,0]
+        up_vec=Vector3D(0,1,0)
         # forwards/backwards
-        frw_matr=self.get_dir()
+        frw_vec=self.get_dir()
         # right/left
-        rgt_matr=[-math.sin(math.radians(self.yaw)-math.pi/2),0,math.cos(math.radians(self.yaw)-math.pi/2)]
+        rgt_vec=self.right_vec
 
         # if a few keys are pressed, some cancel out
         # forwards
         if Qt.Key_W in self.active_keys and self.active_keys[Qt.Key_W]:
-            dir_matr=[dir_matr[i]+frw_matr[i] for i in range(3)]
+            dir_matr=[dir_matr[i]+frw_vec[i] for i in range(3)]
         # backwards
         if Qt.Key_S in self.active_keys and self.active_keys[Qt.Key_S]:
-            dir_matr=[dir_matr[i]-frw_matr[i] for i in range(3)]
+            dir_matr=[dir_matr[i]-frw_vec[i] for i in range(3)]
         # right
         if Qt.Key_D in self.active_keys and self.active_keys[Qt.Key_D]:
-            dir_matr=[dir_matr[i]+rgt_matr[i] for i in range(3)]
+            dir_matr=[dir_matr[i]-rgt_vec[i] for i in range(3)]
         # left
         if Qt.Key_A in self.active_keys and self.active_keys[Qt.Key_A]:
-            dir_matr=[dir_matr[i]-rgt_matr[i] for i in range(3)]
+            dir_matr=[dir_matr[i]+rgt_vec[i] for i in range(3)]
         # up
         if Qt.Key_Space in self.active_keys and self.active_keys[Qt.Key_Space]:
-            dir_matr=[dir_matr[i]+up_matr[i] for i in range(3)]
+            dir_matr=[dir_matr[i]+up_vec[i] for i in range(3)]
         # down
         if Qt.Key_Shift in self.active_keys and self.active_keys[Qt.Key_Shift]:
-            dir_matr=[dir_matr[i]-up_matr[i] for i in range(3)]
+            dir_matr=[dir_matr[i]-up_vec[i] for i in range(3)]
         # Acceleration function
         # FIXME - could be improved
         t = time.time()-self.last_moved

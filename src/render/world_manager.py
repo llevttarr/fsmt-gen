@@ -65,6 +65,7 @@ class Chunk:
         self.v_count = 0
 
         # obj
+        self.o_vao = None
         self.o_vbo = None
         self.o_ebo = None
         self.o_v_list = []
@@ -82,14 +83,14 @@ class Chunk:
                 y = get_y((x, z), seed)
                 rg = get_region((x,z),seed)
                 obj = None
-                # if can_place((x,y,z),seed):
-                #     obj = Object3D(os.path.abspath(os.path.join(
-                #             os.path.dirname(__file__),
-                #             "..","..", 
-                #             "static","assets","test_obj.obj"
-                #         )
-                #         ))
-                #     obj.translate(x,y,z)
+                if can_place((x,y,z),seed):
+                    obj = Object3D(os.path.abspath(os.path.join(
+                            os.path.dirname(__file__),
+                            "..","..", 
+                            "static","assets","tree.obj"
+                        )
+                        ))
+                    obj.translate(x,y,z)
                 block = Block(x, y, z, rg, obj)
                 self.blocks.append(block)
         self.rebuild()
@@ -99,8 +100,6 @@ class Chunk:
     def render_block(self,block:Block):
         x,z = block.center_x,block.center_z
         y = block.y - self.k
-            # if self.state == GL_DYNAMIC_DRAW: # animation should not play anymore
-            #     self.state = GL_STATIC_DRAW
         v_list = [
             [x-1,0,z-1],
             [x+1,0,z-1],
@@ -145,14 +144,19 @@ class Chunk:
             if not block.is_final:
                 dy = y - block.obj.y
                 block.obj.translate(0,dy,0)
-            o_v,o_vlist,o_ilist = block.obj.get_mesh(self.v_count,[0.3, 0.1, 0.3])
-            self.v_count+=o_v
-            self.i_list.extend(o_ilist)
-            self.v_list.extend(o_vlist)
+            col = None
+            if v_c==[1.0,1.0,1.0]:
+                col = v_c
+            o_v,o_vlist,o_ilist = block.obj.get_mesh(self.o_v_count,col)
+            self.o_v_count+=o_v
+            self.o_i_list.extend(o_ilist)
+            self.o_v_list.extend(o_vlist)
     def rebuild(self):
         if self.k>0:
             diff = 0.003*((time.perf_counter()- self.time_created)**4)
             self.k-=diff
+            if self.k < 0:
+                self.k = 0
         self.v_list = []
         self.i_list = []
         self.v_count = 0
@@ -171,6 +175,7 @@ class Chunk:
             self.vbo = glGenBuffers(1)
             self.ebo = glGenBuffers(1)
 
+            self.o_vao = glGenVertexArrays(1)
             self.o_vbo = glGenBuffers(1)
             self.o_ebo = glGenBuffers(1)
 
@@ -181,18 +186,37 @@ class Chunk:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
         ilist_np = np.array(self.i_list, dtype=np.uint32)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilist_np.nbytes, ilist_np, self.state)
+
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
+        glEnableClientState(GL_COLOR_ARRAY)
+        glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
+        # obj
+        glBindVertexArray(self.o_vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
+        vlist_np = np.array(self.o_v_list, dtype=np.float32)
+        glBufferData(GL_ARRAY_BUFFER, vlist_np.nbytes, vlist_np, self.state)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.o_ebo)
+        ilist_np = np.array(self.o_i_list, dtype=np.uint32)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilist_np.nbytes, ilist_np, self.state)
+
         glEnableClientState(GL_VERTEX_ARRAY)
         glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
         glEnableClientState(GL_COLOR_ARRAY)
         glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
 
         glBindVertexArray(0)
-
+    
     def render(self):
         glBindVertexArray(self.vao)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
         glDrawElements(GL_TRIANGLES, len(self.i_list), GL_UNSIGNED_INT, None)
+        
+        glBindVertexArray(self.o_vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.o_ebo)
+        glDrawElements(GL_TRIANGLES, len(self.o_i_list), GL_UNSIGNED_INT, None)
         glBindVertexArray(0)
 
 
@@ -302,7 +326,7 @@ class World:
         if closest_b is not None:
             print(f'selected block at {closest_b.center_x}, {closest_b.curr_y}, {closest_b.center_z}')
             print(f'region of the block: {closest_b.region}')
-            print(f'has object: {closest_b.obj is None}')
+            print(f'has object: {closest_b.obj is not None}')
             self.selected_chunk = closest_c
             self.selected_block = closest_b
             if temp:

@@ -65,9 +65,9 @@ class GenerationViewWidget(QOpenGLWidget):
 
     def initializeGL(self):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
-        # glEnable(GL_CULL_FACE)
-        # glFrontFace(GL_CCW)
-        # glCullFace(GL_BACK)
+        glEnable(GL_CULL_FACE)
+        glFrontFace(GL_CCW)
+        glCullFace(GL_BACK)
         glEnable(GL_DEPTH_TEST)
         print('starting to generate world')
         try:

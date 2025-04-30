@@ -67,20 +67,20 @@ class Object3D:
                     0,  0, 0, 1
                 )
         self.transform = r_matrix @ self.transform
-    def generate_mesh(self):
+    def get_mesh(self, o_v_count, col):
         v_list = []
         i_list = []
+        if not col:
+            col = [0.3, 0.3, 0.3] #temp
         for x, y, z in self.vi_list:
             vec = self.transform @ Vector4D(x, y, z, 1)
-            r=rand.randint(1,10)/10
-            v_list.extend([vec[0], vec[1], vec[2]] + [0.3,r,0.3])
+            v_list.extend([vec[0], vec[1], vec[2]] + col)
         for mesh in self.m_list:
             for face in mesh.faces:
-                if len(face) == 3:
-                    i_list.extend([face[0], 
-                                face[1], 
-                                face[2]])
+                i_list.extend([
+                    o_v_count+face[0], 
+                    o_v_count+face[1], 
+                    o_v_count+face[2]
+                    ])
 
-        self.v_list,self.i_list=v_list, i_list
-    def render(self):
-        pass
+        return len(v_list),v_list,i_list

@@ -10,6 +10,7 @@ from OpenGL.GLU import *
 
 from core.camera import Camera
 from core.enums import WindowState, CameraState
+from core.matrix_util import Vector3D,Vector4D,Matrix3D,Matrix4D
 from render.world_manager import World
 from ui.interactable import MenuToConfigButton
 
@@ -66,11 +67,11 @@ class GenerationViewWidget(QOpenGLWidget):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
         glEnable(GL_CULL_FACE)
         glFrontFace(GL_CCW)
-        glCullFace(GL_FRONT)
+        glCullFace(GL_BACK)
         glEnable(GL_DEPTH_TEST)
         print('starting to generate world')
         try:
-            self.world = World(self.seed,n_rings=4)
+            self.world = World(self.seed,n_rings=10)
             self.world.generate_mesh()
         except Exception as e:
             print('world generation went wrong: ',e)
@@ -89,13 +90,41 @@ class GenerationViewWidget(QOpenGLWidget):
             self.world.perf_tick()
         except Exception as e:
             print('OpenGL render error: ',e)
-
     # Input events
     def mousePressEvent(self, event):
-        pass
+        if self.mouse_locked:
+            return
+        if event.button() == Qt.LeftButton:
+            # ray casting to check for selection
+            ray_origin=Vector3D(
+                self.camera.pos[0],
+                self.camera.pos[1],
+                self.camera.pos[2],
+            )
+            x,y=self.normalize_mouse_pos(event.x(),event.y())
+            print(f'normalized coords: {x}, {y}')
+            ray_clip = Vector4D(x, y, -1.0, 1.0)
+            inv_proj = self.camera.proj_matr(self.width(),self.height()).inverse()
+            ray_eye = inv_proj @ ray_clip
+            ray_eye = Vector4D(ray_eye[0], ray_eye[1], -1.0, 0.0)
+
+            inv_view = self.camera.view_matr().inverse()
+            ray_world = inv_view @ ray_eye
+            ray_dir = Vector3D(ray_world[0], ray_world[1], ray_world[2]).normalize()
+            self.world.select_block(ray_origin.data,ray_dir.data)
+        if event.button() == Qt.RightButton:
+            pass # 
+
     def mouseReleaseEvent(self, event):
         pass
-
+    def resizeGL(self, w, h):
+        self.camera.aspect_ratio = w / h
+        self.camera.apply(w, h)
+    def normalize_mouse_pos(self,x,y):
+        w,h= self.width(), self.height()
+        x=(2.0 * x) / w - 1.0
+        y=1.0-(2.0*y)/h
+        return -x,-y
     def mouseMoveEvent(self, event):
         if not self.mouse_locked:
             return
@@ -127,6 +156,9 @@ class GenerationViewWidget(QOpenGLWidget):
         if self.mouse_locked:
             self.setCursor(Qt.BlankCursor)
             QCursor.setPos(self.mapToGlobal(self.rect().center()))
+    # # # # #
+    def get_mouse_ray(self, x, y):
+        pass
 
 class GenerationConfigWidget(QWidget):
     def __init__(self, main_window):

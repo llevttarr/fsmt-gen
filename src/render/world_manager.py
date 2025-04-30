@@ -1,10 +1,16 @@
 '''
 Environment management utility
 '''
+import sys
+import os
+
 from core.enums import Region
 from core.terrain_gen import get_y
 from core.region_gen import get_region
 from core.object_gen import can_place
+from core.matrix_util import Vector3D,Vector4D,Matrix3D,Matrix4D
+
+from render.object_manager import Object3D
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -12,6 +18,9 @@ from OpenGL.GLU import *
 import random as rand
 import numpy as np
 import time
+
+# sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 BLOCK_SIZE = 2
 
 class Block:
@@ -36,27 +45,36 @@ class Block:
         self.curr_y += s * diff
         if self.curr_y >= self.y:
             self.curr_y = self.y
-            self.appearing = False
+            self.is_final = True
 
 class Chunk:
     def __init__(self, seed, center_x=0, center_z=0):
         self.blocks = []
         #block size
         size = BLOCK_SIZE
+        self.state = GL_DYNAMIC_DRAW
+
+        self.k = 5 # Block.y_0 = Block.y - k
+        self.time_created = time.perf_counter()
 
         self.vao = None
-        # dynamic
-        self.dyn_vbo = None
-        self.dyn_ebo = None
-        self.dyn_vlist = []
-        self.dyn_ilist=[]
-        self.dyn_v_count = 0
-        # static
-        self.st_vbo = None
-        self.st_ebo = None
-        self.st_vlist = []
-        self.st_ilist=[]
-        self.st_v_count = 0
+        self.vbo = None
+        self.ebo = None
+        self.v_list = []
+        self.i_list = []
+        self.v_count = 0
+
+        # obj
+        self.o_vao = None
+        self.o_vbo = None
+        self.o_ebo = None
+        self.o_v_list = []
+        self.o_i_list = []
+        self.o_v_count = 0
+
+        self.world = None
+        self.not_final = True
+        self.selected = False
         #every chunk has 9 blocks
         for dx in [-1, 0, 1]:
             for dz in [-1, 0, 1]:
@@ -66,18 +84,22 @@ class Chunk:
                 rg = get_region((x,z),seed)
                 obj = None
                 if can_place((x,y,z),seed):
-                    obj = None #temp
-                self.blocks.append(Block(x, y, z, rg))
+                    obj = Object3D(os.path.abspath(os.path.join(
+                            os.path.dirname(__file__),
+                            "..","..", 
+                            "static","assets","tree.obj"
+                        )
+                        ))
+                    obj.translate(x,y,z)
+                block = Block(x, y, z, rg, obj)
+                self.blocks.append(block)
         self.rebuild()
 
     def get_v_color(self, y):
         return [0.5, (y/30), 0.5] #temp
-    def render_block(self,block:Block,is_dynamic):
+    def render_block(self,block:Block):
         x,z = block.center_x,block.center_z
-        if is_dynamic:
-            y = block.curr_y
-        else:
-            y = block.y
+        y = block.y - self.k
         v_list = [
             [x-1,0,z-1],
             [x+1,0,z-1],
@@ -90,91 +112,93 @@ class Chunk:
             [x-1,y,z+1],
         ]
         f_list = [
-            (3, 2, 1, 0), 
-            (4, 5, 6, 7),
-            (0, 1, 5, 4),
-            (1, 2, 6, 5),
-            (2, 3, 7, 6),
-            (3, 0, 4, 7)
+            (0, 1, 2, 3),  
+            (7, 6, 5, 4),  
+            (4, 5, 1, 0),  
+            (5, 6, 2, 1),  
+            (6, 7, 3, 2),  
+            (7, 4, 0, 3)   
         ]
-
-        v_c = self.get_v_color(y)
-        for v in v_list:
-            if is_dynamic:
-                self.dyn_vlist.extend(v+v_c)
-            else:
-                self.st_vlist.extend(v+v_c)
-        for f in f_list:
-            if is_dynamic:
-                self.dyn_ilist.extend(
-                    [
-                        self.dyn_v_count + f[0],
-                        self.dyn_v_count + f[1],
-                        self.dyn_v_count + f[2],
-                        self.dyn_v_count + f[0],
-                        self.dyn_v_count + f[2],
-                        self.dyn_v_count + f[3],
-                    ]
-                )
-            else:
-                self.st_vlist.extend(
-                    [
-                        self.st_v_count + f[0],
-                        self.st_v_count + f[1],
-                        self.st_v_count + f[2],
-                        self.st_v_count + f[0],
-                        self.st_v_count + f[2],
-                        self.st_v_count + f[3],
-                    ]
-                )
-        if is_dynamic:
-            self.dyn_v_count+=8
+        if self.world is not None \
+        and self.world.selected_block is not None \
+        and (self.world.selected_block.center_x==block.center_x and self.world.selected_block.center_z==block.center_z):
+            v_c=[1.0,1.0,1.0]
         else:
-            self.st_v_count+=8
-    def update(self):
-        flag = False
-        finalized_blocks = []
-        for block in self.blocks:
-            if not block.is_final:
-                block.update()
-                if block.is_final:
-                    finalized_blocks.append(block)
-                flag = True
-        for block in finalized_blocks:
-            self.render_block(block,False)
-            self.blocks.remove(block)
-        if flag:
-            self.rebuild()
-    def rebuild(self):
-        self.dyn_ilist = []
-        self.dyn_vlist = []
-        self.dyn_v_count = 0
-        for block in self.blocks:
-            self.render_block(block, True)
-        self.send_gpu()
+            v_c = self.get_v_color(y)
+        for v in v_list:
+            self.v_list.extend(v+v_c)
+        for f in f_list:
+            self.i_list.extend(
+                [
+                    self.v_count + f[0],
+                    self.v_count + f[1],
+                    self.v_count + f[2],
+                    self.v_count + f[0],
+                    self.v_count + f[2],
+                    self.v_count + f[3],
+                ]
+            )
 
+        self.v_count+=8
+        if block.obj is not None:
+            if not block.is_final:
+                dy = y - block.obj.y
+                block.obj.translate(0,dy,0)
+            col = None
+            if v_c==[1.0,1.0,1.0]:
+                col = v_c
+            o_v,o_vlist,o_ilist = block.obj.get_mesh(self.o_v_count,col)
+            self.o_v_count+=o_v
+            self.o_i_list.extend(o_ilist)
+            self.o_v_list.extend(o_vlist)
+    def rebuild(self):
+        if self.k>0:
+            diff = 0.003*((time.perf_counter()- self.time_created)**4)
+            self.k-=diff
+            if self.k < 0:
+                self.k = 0
+        self.v_list = []
+        self.i_list = []
+        self.v_count = 0
+
+        self.o_v_list = []
+        self.o_i_list = []
+        self.o_v_count = 0
+        for block in self.blocks:
+            self.render_block(block)
+            if block.is_final and self.not_final:
+                self.not_final = False
+        self.send_gpu()
     def send_gpu(self):
         if self.vao is None:
             self.vao = glGenVertexArrays(1)
-            self.dyn_vbo = glGenBuffers(1)
-            self.dyn_ebo = glGenBuffers(1)
-            self.st_vbo = glGenBuffers(1)
-            self.st_ebo = glGenBuffers(1)
+            self.vbo = glGenBuffers(1)
+            self.ebo = glGenBuffers(1)
+
+            self.o_vao = glGenVertexArrays(1)
+            self.o_vbo = glGenBuffers(1)
+            self.o_ebo = glGenBuffers(1)
 
         glBindVertexArray(self.vao)
-        glBindBuffer(GL_ARRAY_BUFFER, self.st_vbo)
-        st_vlist_np = np.array(self.st_vlist, dtype=np.float32)
-        glBufferData(GL_ARRAY_BUFFER, st_vlist_np.nbytes, st_vlist_np, GL_STATIC_DRAW)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.st_ebo)
-        st_ilist_np = np.array(self.st_ilist, dtype=np.uint32)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, st_ilist_np.nbytes, st_ilist_np, GL_STATIC_DRAW)
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        vlist_np = np.array(self.v_list, dtype=np.float32)
+        glBufferData(GL_ARRAY_BUFFER, vlist_np.nbytes, vlist_np, self.state)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
+        ilist_np = np.array(self.i_list, dtype=np.uint32)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilist_np.nbytes, ilist_np, self.state)
 
-        glBindBuffer(GL_ARRAY_BUFFER, self.dyn_vbo)
-        dyn_vlist_np = np.array(self.dyn_vlist, dtype=np.float32)
-        glBufferData(GL_ARRAY_BUFFER, dyn_vlist_np.nbytes, dyn_vlist_np, GL_DYNAMIC_DRAW)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.dyn_ebo)
-        dyn_ilist_np = np.array(self.dyn_ilist, dtype=np.uint32)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, dyn_ilist_np.nbytes, dyn_ilist_np, GL_DYNAMIC_DRAW)
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
+        glEnableClientState(GL_COLOR_ARRAY)
+        glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
+        # obj
+        glBindVertexArray(self.o_vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
+        vlist_np = np.array(self.o_v_list, dtype=np.float32)
+        glBufferData(GL_ARRAY_BUFFER, vlist_np.nbytes, vlist_np, self.state)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.o_ebo)
+        ilist_np = np.array(self.o_i_list, dtype=np.uint32)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilist_np.nbytes, ilist_np, self.state)
 
         glEnableClientState(GL_VERTEX_ARRAY)
         glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
@@ -182,22 +206,22 @@ class Chunk:
         glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
 
         glBindVertexArray(0)
-
+    
     def render(self):
         glBindVertexArray(self.vao)
-        glBindBuffer(GL_ARRAY_BUFFER, self.st_vbo)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.st_ebo)
-        glDrawElements(GL_TRIANGLES, len(self.st_ilist), GL_UNSIGNED_INT, None)
-
-        glBindBuffer(GL_ARRAY_BUFFER, self.dyn_vbo)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.dyn_ebo)
-        glDrawElements(GL_TRIANGLES, len(self.dyn_ilist), GL_UNSIGNED_INT, None)
-
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
+        glDrawElements(GL_TRIANGLES, len(self.i_list), GL_UNSIGNED_INT, None)
+        
+        glBindVertexArray(self.o_vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.o_ebo)
+        glDrawElements(GL_TRIANGLES, len(self.o_i_list), GL_UNSIGNED_INT, None)
         glBindVertexArray(0)
 
 
 class World:
-    def __init__(self, seed,shader=None, n_rings=10, generation_rate=2, obj_intensity=0.5, height_intensity=0.5): #generation_rate is measured in ticks
+    def __init__(self, seed=1,shader=None, n_rings=10, generation_rate=2, obj_intensity=0.5, height_intensity=0.5): #generation_rate is measured in ticks
         self.seed = seed
         if n_rings < 1:
             raise ValueError("Number of rings cannot be less than 1")
@@ -210,9 +234,13 @@ class World:
             raise ValueError("Generation rate cannot be less than 1")
 
         self.chunk_scheduled = []
+        self.dynamic_chunks = []
         self.chunk_list = []
         # self.view_type = ObjectViewType.DEFAULT
 
+        self.selected_block = None
+        self.selected_chunk = None
+        self.prev_selected_chunk = None # saving it so deselection is possible
     def generate_mesh(self):
         '''
         Generates a list of chunks to implement
@@ -229,15 +257,23 @@ class World:
                 self.chunk_scheduled.append((-r, z))
             curr_ring+=1
     def update(self):
-        for chunk in self.chunk_list:
-            chunk.update()
+        to_remove = []
+        for chunk in self.dynamic_chunks:
+            if chunk.k<=0.1:
+                chunk.state = GL_STATIC_DRAW
+                to_remove.append(chunk)
+            chunk.rebuild()
+        for chunk in to_remove:
+            self.dynamic_chunks.remove(chunk)
     def generate_chunk(self):
         if not self.chunk_scheduled:
             return
         x,z=self.chunk_scheduled.pop(0)
-        print(f'generating chunk at {x}, {z}')
+        # print(f'generating chunk at {x}, {z}')
         chunk = Chunk(self.seed, center_x=x, center_z=z)
+        chunk.world = self
         self.chunk_list.append(chunk)
+        self.dynamic_chunks.append(chunk)
     def perf_tick(self):
         if time.perf_counter() - self.last_tick< (1/20):
             return
@@ -247,5 +283,59 @@ class World:
         if self.ticks_elapsed%self.rate==0 and len(self.chunk_scheduled)!=0:
             self.generate_chunk()
     def render(self):
+        if self.selected_chunk:
+            self.selected_chunk.state = GL_DYNAMIC_DRAW
+            self.selected_chunk.rebuild()
+        if self.prev_selected_chunk:
+            self.prev_selected_chunk.state = GL_STATIC_DRAW
+            self.prev_selected_chunk.rebuild()
+        for chunk in self.dynamic_chunks:
+            chunk.rebuild()
         for chunk in self.chunk_list:
             chunk.render()
+# # # # # # #
+    def intersect_check(self, ray_origin, ray_dir, bound_0, bound_max):
+        t_0=(bound_0.data-ray_origin)/ray_dir
+        t_1=(bound_max.data-ray_origin)/ray_dir
+        t_0=Vector3D(t_0[0], t_0[1],t_0[2])
+        t_1=Vector3D(t_1[0], t_1[1],t_1[2])
+
+        t_min = np.minimum(t_0.data, t_1.data)
+        t_max = np.maximum(t_0.data, t_1.data)
+
+        t_enter = np.max(t_min)
+        t_exit = np.min(t_max)
+        if t_enter > t_exit or t_exit < 0:
+            return False, None
+        return True,t_enter
+    def select_block(self, ray_origin, ray_dir):
+        temp = None
+        if self.selected_chunk:
+            temp = self.selected_chunk
+        print(f"casting ray <{ray_origin} in dir: {ray_dir}>")
+        closest_b,closest_c,closest_t=None,None,float('inf')
+        for chunk in self.chunk_list:
+            k = chunk.k
+            for block in chunk.blocks:
+                bound_0=Vector3D(block.center_x-1,0,block.center_z-1)
+                bound_max=Vector3D(block.center_x+1,block.y-k,block.center_z+1)
+                hit_occured,t_hit=self.intersect_check(ray_origin,ray_dir,bound_0,bound_max)
+                if hit_occured and t_hit<closest_t:
+                    closest_t,closest_b=t_hit,block
+                    closest_c = chunk
+        if closest_b is not None:
+            print(f'selected block at {closest_b.center_x}, {closest_b.curr_y}, {closest_b.center_z}')
+            print(f'region of the block: {closest_b.region}')
+            print(f'has object: {closest_b.obj is not None}')
+            self.selected_chunk = closest_c
+            self.selected_block = closest_b
+            if temp:
+                self.prev_selected_chunk = temp
+        else:
+            print('removing selection')
+            if self.selected_chunk is not None:
+                self.prev_selected_chunk = self.selected_chunk
+                self.selected_chunk = None
+                self.selected_block = None
+                if temp:
+                    self.prev_selected_chunk = temp

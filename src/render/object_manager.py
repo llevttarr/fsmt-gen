@@ -5,15 +5,17 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from pywavefront import Wavefront
 from math import cos, sin
+
 from core.matrix_util import Matrix4D,Vector3D,Vector4D,Matrix3D
 from core.enums import ObjectViewType,RotationAxis
 
+import random as rand
 
 class Object3D:
     def __init__(self, path):
         self.info = Wavefront(path, collect_faces=True,create_materials=False) # path - path to the .obj file of the object
         self.m_list = self.info.mesh_list
-        self.v_list = self.info.vertices
+        self.vi_list = self.info.vertices
         self.transform = Matrix4D(
             1, 0, 0, 0,
             0, 1, 0, 0,
@@ -65,17 +67,20 @@ class Object3D:
                     0,  0, 0, 1
                 )
         self.transform = r_matrix @ self.transform
-    def get_mesh(self, v_count, v_c):
+    def generate_mesh(self):
         v_list = []
         i_list = []
-        for x, y, z in self.v_list:
+        for x, y, z in self.vi_list:
             vec = self.transform @ Vector4D(x, y, z, 1)
-            v_list.extend([vec[0], vec[1], vec[2]] + v_c)
+            r=rand.randint(1,10)/10
+            v_list.extend([vec[0], vec[1], vec[2]] + [0.3,r,0.3])
         for mesh in self.m_list:
             for face in mesh.faces:
                 if len(face) == 3:
-                    i_list.extend([v_count + face[0], 
-                                v_count + face[1], 
-                                v_count + face[2]])
+                    i_list.extend([face[0], 
+                                face[1], 
+                                face[2]])
 
-        return len(self.v_list), v_list, i_list
+        self.v_list,self.i_list=v_list, i_list
+    def render(self):
+        pass

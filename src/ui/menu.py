@@ -71,7 +71,7 @@ class GenerationViewWidget(QOpenGLWidget):
         glEnable(GL_DEPTH_TEST)
         print('starting to generate world')
         try:
-            self.world = World(self.seed,n_rings=4)
+            self.world = World(self.seed,n_rings=10)
             self.world.generate_mesh()
         except Exception as e:
             print('world generation went wrong: ',e)
@@ -92,6 +92,8 @@ class GenerationViewWidget(QOpenGLWidget):
             print('OpenGL render error: ',e)
     # Input events
     def mousePressEvent(self, event):
+        if self.mouse_locked:
+            return
         if event.button() == Qt.LeftButton:
             # ray casting to check for selection
             ray_origin=Vector3D(

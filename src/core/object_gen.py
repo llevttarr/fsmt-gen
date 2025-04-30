@@ -171,7 +171,7 @@ def can_place(coordinates, seed, region=Region.STEPPE, intensity=0.03):
     region_multipliers = {
         Region.STEPPE: 0.85,
         Region.FOREST: 1.85,
-        Region.SNOW_PLAINS: 1.7
+        Region.SNOW_PLAINS: 1.85
     }
 
     if region == Region.STEPPE:
@@ -328,9 +328,9 @@ if __name__ == "__main__":
     print("----------------------------------------------")
 
     # Test parameters.
-    seed = 42
+    seed = 45
     grid_size = 100
-    intensity = 0.15  # Increased from 0.1 for higher density
+    intensity = 0.16  # Increased from 0.1 for higher density
 
     # Create noise instance.
     noise = SimplexNoise(seed)
@@ -391,25 +391,25 @@ if __name__ == "__main__":
                 elif obj_type == "ice_formation": type_map_snow[y, x] = 3
 
     # Create figure for visualization.
-    fig = plt.figure(figsize=(15, 10))
+    fig = plt.figure(figsize=(15, 12))
     fig.suptitle(f"Simplex Noise and Object Generation Visualization (Seed: {seed})", fontsize=16)
 
     # Plot 1: Raw Noise.
-    ax1 = fig.add_subplot(231)
+    ax1 = fig.add_subplot(331)
     im1 = ax1.imshow(noise_map, cmap='terrain', interpolation='bilinear')
     ax1.set_title("Raw Simplex Noise")
     fig.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
 
     # Plot 2-4: Object Placement Maps.
-    ax2 = fig.add_subplot(232)
+    ax2 = fig.add_subplot(332)
     im2 = ax2.imshow(object_map_steppe, cmap='binary', interpolation='nearest')
     ax2.set_title(f"Object Placement (Steppe)")
 
-    ax3 = fig.add_subplot(233)
+    ax3 = fig.add_subplot(333)
     im3 = ax3.imshow(object_map_forest, cmap='binary', interpolation='nearest')
     ax3.set_title(f"Object Placement (Forest)")
 
-    ax4 = fig.add_subplot(234)
+    ax4 = fig.add_subplot(334)
     im4 = ax4.imshow(object_map_snow, cmap='binary', interpolation='nearest')
     ax4.set_title(f"Object Placement (Snow Plains)")
 
@@ -419,19 +419,27 @@ if __name__ == "__main__":
     forest_cmap = ListedColormap(['white', 'darkgreen', 'forestgreen', 'olive'])
     snow_cmap = ListedColormap(['white', 'lightgrey', 'skyblue', 'white'])
 
-    ax5 = fig.add_subplot(235)
+    ax5 = fig.add_subplot(335)
     im5 = ax5.imshow(type_map_steppe, cmap=steppe_cmap, interpolation='nearest', vmin=0, vmax=3)
     ax5.set_title("Object Types (Steppe)")
     steppe_legend = ["None", "Grass", "Bush", "Rock"]
     steppe_patches = [plt.Rectangle((0,0),1,1, color=steppe_cmap(i)) for i in range(4)]
     ax5.legend(steppe_patches, steppe_legend, loc='upper right', fontsize='small')
 
-    ax6 = fig.add_subplot(236)
+    ax6 = fig.add_subplot(336)
     im6 = ax6.imshow(type_map_forest, cmap=forest_cmap, interpolation='nearest', vmin=0, vmax=3)
     ax6.set_title("Object Types (Forest)")
     forest_legend = ["None", "Tall Tree", "Pine Tree", "Bush"]
     forest_patches = [plt.Rectangle((0,0),1,1, color=forest_cmap(i)) for i in range(4)]
     ax6.legend(forest_patches, forest_legend, loc='upper right', fontsize='small')
+
+    ax7 = fig.add_subplot(337)
+    snow_cmap = ListedColormap(['white', 'gray', 'deepskyblue', 'paleturquoise'])
+    im7 = ax7.imshow(type_map_snow, cmap=snow_cmap, interpolation='nearest', vmin=0, vmax=3)
+    ax7.set_title("Object Types (Snow Plains)")
+    snow_legend = ["None", "Snow Rock", "Snow Pine", "Ice Formation"]
+    snow_patches = [plt.Rectangle((0,0),1,1, color=snow_cmap(i)) for i in range(4)]
+    ax7.legend(snow_patches, snow_legend, loc='upper right', fontsize='small')
 
     # Print statistics.
     print("\nObject Placement Statistics:")
@@ -459,6 +467,16 @@ if __name__ == "__main__":
               f"({tall_tree_count/np.sum(object_map_forest)*100:.2f}%)")
         print(f"  Pine Trees: {pine_count} ({pine_count/np.sum(object_map_forest)*100:.2f}%)")
         print(f"  Bushes: {bush_count} ({bush_count/np.sum(object_map_forest)*100:.2f}%)")
+        
+    # Add statistical output for snow plains object type.
+    if np.sum(object_map_snow) > 0:
+        rock_count = np.sum(type_map_snow == 1)
+        pine_count = np.sum(type_map_snow == 2)
+        ice_count = np.sum(type_map_snow == 3)
+        print(f"\nSnow Plains Object Types:")
+        print(f"  Snow Rocks: {rock_count} ({rock_count/np.sum(object_map_snow)*100:.2f}%)")
+        print(f"  Snow Pines: {pine_count} ({pine_count/np.sum(object_map_snow)*100:.2f}%)")
+        print(f"  Ice Formations: {ice_count} ({ice_count/np.sum(object_map_snow)*100:.2f}%)")
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     print("\nDisplaying visualization. Close the plot window to exit.")

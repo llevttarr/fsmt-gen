@@ -3,7 +3,7 @@ App window and GUI manager
 '''
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QPoint
-from PyQt5.QtGui import QCursor, QIcon, QFont
+from PyQt5.QtGui import QCursor, QIcon, QPixmap
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
@@ -12,7 +12,7 @@ from core.enums import WindowState, CameraState
 from render.world_manager import World
 from ui.interactable import MenuToConfigButton, Button, InteractableSlider
 
-import random as rand
+import random
 import time
 import os
 from PyQt5.QtWidgets import QLabel
@@ -23,9 +23,38 @@ class MainMenuWidget(QWidget):
         super().__init__()
         self.main_window = main_window
         self.layout = QVBoxLayout()
-        self.start_button = MenuToConfigButton(main_window)
-        self.layout.addWidget(self.start_button)
+        self.layout.setAlignment(Qt.AlignCenter)
         self.setLayout(self.layout)
+
+        self.title_label = QLabel("Terrain Generator")
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self.title_label.setStyleSheet("""
+            font-size: 32px;
+            font-weight: bold;
+            font-family: 'Courier New';
+        """)
+
+        self.image_label = QLabel(self)
+        pixmap = QPixmap("src/ui/static/assets/logo_fill_transparent.png")
+        scaled_pixmap = pixmap.scaled(400, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.image_label.setPixmap(scaled_pixmap)
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setFixedSize(400, 400)
+
+        self.start_button = MenuToConfigButton(main_window)
+        self.start_button.setFixedSize(400, 50)
+        self.start_button.setCursor(Qt.PointingHandCursor) 
+        self.start_button.setStyleSheet("""
+            font-size: 16px;
+            padding: 10px;
+        """)
+
+        self.layout.addWidget(self.title_label)
+        self.layout.addSpacing(20)
+        self.layout.addWidget(self.image_label)
+        self.layout.addSpacing(30)
+        self.layout.addWidget(self.start_button)
+
 
 class GenerationViewWidget(QOpenGLWidget):
     def __init__(self, main_window, seed=1, fps=144):
@@ -43,9 +72,7 @@ class GenerationViewWidget(QOpenGLWidget):
         self.fps_timer.timeout.connect(self.log_fps)
         self.fps_timer.start(1000)
         self.frame_count=0
-        # self.timer = QTimer()
-        # self.timer.timeout.connect(self.update_w)
-        # self.timer.start(1000//fps)
+
 
         apply_styles(self)
 
@@ -56,14 +83,6 @@ class GenerationViewWidget(QOpenGLWidget):
         print(f"fps: {fps:.2f}")
         self.frame_count = 0
         self.last_time = current_time
-        
-    # def update_w(self):
-    #     if Qt.Key_C in self.camera.active_keys:
-    #         # FIXME - after you zoom in once, this function gets called indefinitely
-    #         self.camera.zoom()
-    #     if self.camera.state==CameraState.DEFAULT:
-    #         self.camera.move()
-    #     self.update()
 
     def initializeGL(self):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
@@ -107,24 +126,6 @@ class GenerationViewWidget(QOpenGLWidget):
         self.camera.rotate(dx, -dy)
         QCursor.setPos(center)
 
-    # def keyPressEvent(self, event):
-    #     self.camera.set_key(event.key(), True)
-    #     match event.key():
-    #         case Qt.Key_Escape:
-                # self.mouse_locked = not self.mouse_locked
-                # self.setCursor(Qt.BlankCursor if self.mouse_locked else Qt.ArrowCursor)
-    #             if self.mouse_locked:
-    #                 QCursor.setPos(self.mapToGlobal(self.rect().center()))
-    #         case Qt.Key_C:
-    #             self.camera.state = CameraState.ZOOM
-    #         case _:
-    #             return
-
-    # def keyReleaseEvent(self, event):
-    #     self.camera.set_key(event.key(), False)
-    #     if event.key()==Qt.Key_C:
-    #         self.camera.state = CameraState.DEFAULT
-
     def showEvent(self, event):
         if self.mouse_locked:
             self.setCursor(Qt.BlankCursor)
@@ -152,7 +153,7 @@ class GenerationSidebar(QWidget):
         self.input_field = QLabel("Enter Seed:")
         self.seed_input = QLineEdit()
         self.generate_button = Button("Generate", self.generate_action)
-        
+        self.generate_button.setCursor(Qt.PointingHandCursor) 
         self.parameters_widget = QWidget()
         self.parameters_layout = QVBoxLayout(self.parameters_widget)
 
@@ -271,25 +272,10 @@ class Window(QMainWindow):
         self.widgets = QStackedWidget()
         self.main_menu = MainMenuWidget(self)
         self.main_interface = MainInterface(self)
-        # self.generator_config = GenerationConfigWidget(self)
-        # self.generator_view = GenerationViewWidget(self)
 
         self.widgets.addWidget(self.main_interface)
         self.widgets.addWidget(self.main_menu)
         self.widgets.setCurrentWidget(self.main_menu)
-
-        # self.widgets.addWidget(self.generator_config)
-        # self.widgets.addWidget(self.generator_view)
-        # self.sidebar = GenerationSidebar(self)
-
-        # self.splitter = QSplitter()
-        # self.splitter.setOrientation(Qt.Horizontal)
-        # self.widgets.addWidget(self.splitter)
-
-        # self.splitter.addWidget(self.sidebar)
-        # self.splitter.addWidget(self.generator_view)
-        # self.splitter.setSizes([300, 1100])
-
 
         self.main_layout.addWidget(self.widgets)
         self.window_state = WindowState.MAIN_MENU

@@ -42,6 +42,7 @@ class InteractableSlider(QWidget):
         self.slider = ObjIntensitySlider(min_max_values)
         self.slider.valueChanged.connect(self.slider_changed)
         self.slider.setFixedWidth(self.width() - 50)
+        self.slider.setCursor(Qt.PointingHandCursor) 
 
         self.display = QTextBrowser()
         self.display.setText(str(min_max_values[0]))

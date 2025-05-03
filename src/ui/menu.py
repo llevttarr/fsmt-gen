@@ -53,7 +53,7 @@ class GenerationViewWidget(QOpenGLWidget):
         current_time = time.time()
         elapsed = current_time - self.last_time
         fps = self.frame_count / elapsed if elapsed > 0 else 0.0
-        # print(f"fps: {fps:.2f}")
+        print(f"fps: {fps:.2f}")
         self.frame_count = 0
         self.last_time = current_time
         
@@ -107,23 +107,23 @@ class GenerationViewWidget(QOpenGLWidget):
         self.camera.rotate(dx, -dy)
         QCursor.setPos(center)
 
-    def keyPressEvent(self, event):
-        self.camera.set_key(event.key(), True)
-        match event.key():
-            case Qt.Key_Escape:
-                self.mouse_locked = not self.mouse_locked
-                self.setCursor(Qt.BlankCursor if self.mouse_locked else Qt.ArrowCursor)
-                if self.mouse_locked:
-                    QCursor.setPos(self.mapToGlobal(self.rect().center()))
-            case Qt.Key_C:
-                self.camera.state = CameraState.ZOOM
-            case _:
-                return
+    # def keyPressEvent(self, event):
+    #     self.camera.set_key(event.key(), True)
+    #     match event.key():
+    #         case Qt.Key_Escape:
+                # self.mouse_locked = not self.mouse_locked
+                # self.setCursor(Qt.BlankCursor if self.mouse_locked else Qt.ArrowCursor)
+    #             if self.mouse_locked:
+    #                 QCursor.setPos(self.mapToGlobal(self.rect().center()))
+    #         case Qt.Key_C:
+    #             self.camera.state = CameraState.ZOOM
+    #         case _:
+    #             return
 
-    def keyReleaseEvent(self, event):
-        self.camera.set_key(event.key(), False)
-        if event.key()==Qt.Key_C:
-            self.camera.state = CameraState.DEFAULT
+    # def keyReleaseEvent(self, event):
+    #     self.camera.set_key(event.key(), False)
+    #     if event.key()==Qt.Key_C:
+    #         self.camera.state = CameraState.DEFAULT
 
     def showEvent(self, event):
         if self.mouse_locked:
@@ -221,74 +221,39 @@ class MainInterface(QWidget):
         self.main_layout.addWidget(self.splitter)
         self.setLayout(self.main_layout)
 
-        self.camera = Camera()
-
-        # mouse cursor management
-        self.last_time = time.time()
-        self.fps_timer = QTimer()
-        self.fps_timer.timeout.connect(self.log_fps)
-        self.fps_timer.start(1000)
-        self.frame_count=0
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_w)
         self.timer.start(1000//fps)
 
-
-    def log_fps(self):
-        current_time = time.time()
-        elapsed = current_time - self.last_time
-        fps = self.frame_count / elapsed if elapsed > 0 else 0.0
-        print(f"fps: {fps:.2f}")
-        self.frame_count = 0
-        self.last_time = current_time
-        
     def update_w(self):
-        if Qt.Key_C in self.camera.active_keys:
+        if Qt.Key_C in self.generator_view.camera.active_keys:
             # FIXME - after you zoom in once, this function gets called indefinitely
-            self.camera.zoom()
-        if self.camera.state==CameraState.DEFAULT:
-            self.camera.move()
-        self.update()
-    
-        # Input events
-    def mousePressEvent(self, event):
-        pass
-    def mouseReleaseEvent(self, event):
-        pass
+            self.generator_view.camera.zoom()
+        if self.generator_view.camera.state==CameraState.DEFAULT:
+            self.generator_view.camera.move()
+        self.generator_view.update()
 
-    def mouseMoveEvent(self, event):
-        if not self.mouse_locked:
-            return
-        center = self.mapToGlobal(self.rect().center())
-        dx = event.globalX() - center.x()
-        dy = event.globalY() - center.y()
-        self.camera.rotate(dx, -dy)
-        QCursor.setPos(center)
-
+   
     def keyPressEvent(self, event):
-        self.camera.set_key(event.key(), True)
+        self.generator_view.camera.set_key(event.key(), True)
         match event.key():
             case Qt.Key_Escape:
-                self.mouse_locked = not self.mouse_locked
-                self.setCursor(Qt.BlankCursor if self.mouse_locked else Qt.ArrowCursor)
-                if self.mouse_locked:
+                self.generator_view.mouse_locked = not self.generator_view.mouse_locked
+                self.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
+                self.generator_view.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
+                if self.generator_view.mouse_locked:
                     QCursor.setPos(self.mapToGlobal(self.rect().center()))
             case Qt.Key_C:
-                self.camera.state = CameraState.ZOOM
+                self.generator_view.camera.state = CameraState.ZOOM
             case _:
                 return
-
+    
     def keyReleaseEvent(self, event):
-        self.camera.set_key(event.key(), False)
+        self.generator_view.camera.set_key(event.key(), False)
         if event.key()==Qt.Key_C:
-            self.camera.state = CameraState.DEFAULT
+            self.generator_view.camera.state = CameraState.DEFAULT
 
-    def showEvent(self, event):
-        if self.mouse_locked:
-            self.setCursor(Qt.BlankCursor)
-            QCursor.setPos(self.mapToGlobal(self.rect().center()))
-
-
+  
 class Window(QMainWindow):
     '''
     App window object

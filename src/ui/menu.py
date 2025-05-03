@@ -3,15 +3,14 @@ App window and GUI manager
 '''
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QPoint
-from PyQt5.QtGui import QCursor
+from PyQt5.QtGui import QCursor, QIcon, QFont
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
 from core.camera import Camera
 from core.enums import WindowState, CameraState
 from render.world_manager import World
-from ui.interactable import MenuToConfigButton, Button, InteractableSlider, ObjIntensitySlider
-
+from ui.interactable import MenuToConfigButton, Button, InteractableSlider
 
 import random as rand
 import time
@@ -23,10 +22,10 @@ class MainMenuWidget(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        layout = QVBoxLayout()
-        start_button = MenuToConfigButton(main_window)
-        layout.addWidget(start_button)
-        self.setLayout(layout)
+        self.layout = QVBoxLayout()
+        self.start_button = MenuToConfigButton(main_window)
+        self.layout.addWidget(self.start_button)
+        self.setLayout(self.layout)
 
 class GenerationViewWidget(QOpenGLWidget):
     def __init__(self, main_window, seed=1, fps=144):
@@ -44,25 +43,27 @@ class GenerationViewWidget(QOpenGLWidget):
         self.fps_timer.timeout.connect(self.log_fps)
         self.fps_timer.start(1000)
         self.frame_count=0
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_w)
-        self.timer.start(1000//fps)
+        # self.timer = QTimer()
+        # self.timer.timeout.connect(self.update_w)
+        # self.timer.start(1000//fps)
+
+        apply_styles(self)
 
     def log_fps(self):
         current_time = time.time()
         elapsed = current_time - self.last_time
         fps = self.frame_count / elapsed if elapsed > 0 else 0.0
-        print(f"fps: {fps:.2f}")
+        # print(f"fps: {fps:.2f}")
         self.frame_count = 0
         self.last_time = current_time
         
-    def update_w(self):
-        if Qt.Key_C in self.camera.active_keys:
-            # FIXME - after you zoom in once, this function gets called indefinitely
-            self.camera.zoom()
-        if self.camera.state==CameraState.DEFAULT:
-            self.camera.move()
-        self.update()
+    # def update_w(self):
+    #     if Qt.Key_C in self.camera.active_keys:
+    #         # FIXME - after you zoom in once, this function gets called indefinitely
+    #         self.camera.zoom()
+    #     if self.camera.state==CameraState.DEFAULT:
+    #         self.camera.move()
+    #     self.update()
 
     def initializeGL(self):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
@@ -140,21 +141,23 @@ class GenerationSidebar(QWidget):
 
     def __init__(self, main_window):
         super().__init__()
-        self.setMaximumHeight(200)
         self.main_window = main_window
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
+        self.title = QLabel("Terrain Generator", )
+        self.title.setStyleSheet("font-size: 20px; font-family: Courier New; font-weight: bold;")
+
+
         self.input_field = QLabel("Enter Seed:")
         self.seed_input = QLineEdit()
         self.generate_button = Button("Generate", self.generate_action)
-
-        self.parameters_widget = QWidget()
-        self.parameters_layout = QHBoxLayout(self.parameters_widget)
         
+        self.parameters_widget = QWidget()
+        self.parameters_layout = QVBoxLayout(self.parameters_widget)
+
         self.generate_widget = QWidget()
         self.seed_generate = QVBoxLayout(self.generate_widget)
-        self.generate_widget.setFixedWidth(220)
 
         self.obj_intensity = InteractableSlider(self, "Object Intensity", (0, 100), "decimal")
         self.rings = InteractableSlider(self, "Rings", (1, 10))
@@ -165,14 +168,19 @@ class GenerationSidebar(QWidget):
         self.parameters_layout.addWidget(self.rings)
         self.parameters_layout.addWidget(self.generation_rate)
         self.parameters_layout.addWidget(self.height_intensity)
+        self.parameters_layout.setAlignment(Qt.AlignCenter)
 
         self.seed_generate.addWidget(self.input_field)
         self.seed_generate.addWidget(self.seed_input)
         self.seed_generate.addWidget(self.generate_button)
 
-
-        self.main_layout.addWidget(self.generate_widget)
+        self.main_layout.addWidget(self.title)
         self.main_layout.addWidget(self.parameters_widget)
+        self.main_layout.addWidget(self.generate_widget)
+
+
+        #cosmetichka
+        apply_styles(self)
 
     def generate_action(self):
         try:
@@ -188,7 +196,97 @@ class GenerationSidebar(QWidget):
                 ]
                 print(values)
         except ValueError:
+            msg_box = QMessageBox(self.main_window)
+            msg_box.setWindowTitle("Incorrect Seed")
+            msg_box.setText("The Seed Must Contain Only Numbers")
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.exec_()
             print("Invalid seed value.")
+
+class MainInterface(QWidget):
+    def __init__(self, main_window, fps=144):
+        super().__init__()
+        self.main_window = main_window
+        self.main_layout = QVBoxLayout(self)
+        self.sidebar = GenerationSidebar(self)
+        self.generator_view = GenerationViewWidget(self)
+
+        self.splitter = QSplitter(self)
+        self.splitter.setOrientation(Qt.Horizontal)
+
+        self.splitter.addWidget(self.sidebar)
+        self.splitter.addWidget(self.generator_view)
+        self.splitter.setSizes([300, 1100])
+
+        self.main_layout.addWidget(self.splitter)
+        self.setLayout(self.main_layout)
+
+        self.camera = Camera()
+
+        # mouse cursor management
+        self.last_time = time.time()
+        self.fps_timer = QTimer()
+        self.fps_timer.timeout.connect(self.log_fps)
+        self.fps_timer.start(1000)
+        self.frame_count=0
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_w)
+        self.timer.start(1000//fps)
+
+
+    def log_fps(self):
+        current_time = time.time()
+        elapsed = current_time - self.last_time
+        fps = self.frame_count / elapsed if elapsed > 0 else 0.0
+        print(f"fps: {fps:.2f}")
+        self.frame_count = 0
+        self.last_time = current_time
+        
+    def update_w(self):
+        if Qt.Key_C in self.camera.active_keys:
+            # FIXME - after you zoom in once, this function gets called indefinitely
+            self.camera.zoom()
+        if self.camera.state==CameraState.DEFAULT:
+            self.camera.move()
+        self.update()
+    
+        # Input events
+    def mousePressEvent(self, event):
+        pass
+    def mouseReleaseEvent(self, event):
+        pass
+
+    def mouseMoveEvent(self, event):
+        if not self.mouse_locked:
+            return
+        center = self.mapToGlobal(self.rect().center())
+        dx = event.globalX() - center.x()
+        dy = event.globalY() - center.y()
+        self.camera.rotate(dx, -dy)
+        QCursor.setPos(center)
+
+    def keyPressEvent(self, event):
+        self.camera.set_key(event.key(), True)
+        match event.key():
+            case Qt.Key_Escape:
+                self.mouse_locked = not self.mouse_locked
+                self.setCursor(Qt.BlankCursor if self.mouse_locked else Qt.ArrowCursor)
+                if self.mouse_locked:
+                    QCursor.setPos(self.mapToGlobal(self.rect().center()))
+            case Qt.Key_C:
+                self.camera.state = CameraState.ZOOM
+            case _:
+                return
+
+    def keyReleaseEvent(self, event):
+        self.camera.set_key(event.key(), False)
+        if event.key()==Qt.Key_C:
+            self.camera.state = CameraState.DEFAULT
+
+    def showEvent(self, event):
+        if self.mouse_locked:
+            self.setCursor(Qt.BlankCursor)
+            QCursor.setPos(self.mapToGlobal(self.rect().center()))
 
 
 class Window(QMainWindow):
@@ -198,7 +296,8 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Terrain Generator")
-        self.setGeometry(100, 100, 1000, 760)
+        self.setGeometry(100, 100, 1400, 860)
+        self.setWindowIcon(QIcon("src/ui/static/logo.png"))
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -206,24 +305,32 @@ class Window(QMainWindow):
 
         self.widgets = QStackedWidget()
         self.main_menu = MainMenuWidget(self)
-        self.generator_config = GenerationConfigWidget(self)
-        self.generator_view = GenerationViewWidget(self)
+        self.main_interface = MainInterface(self)
+        # self.generator_config = GenerationConfigWidget(self)
+        # self.generator_view = GenerationViewWidget(self)
 
+        self.widgets.addWidget(self.main_interface)
         self.widgets.addWidget(self.main_menu)
-        self.widgets.addWidget(self.generator_config)
-        self.widgets.addWidget(self.generator_view)
         self.widgets.setCurrentWidget(self.main_menu)
-        self.sidebar = GenerationSidebar(self)
 
-        self.splitter = QSplitter()
-        self.splitter.setOrientation(Qt.Vertical)
-        self.splitter.setSizes([560, 200])
-        self.main_layout.addWidget(self.splitter)
+        # self.widgets.addWidget(self.generator_config)
+        # self.widgets.addWidget(self.generator_view)
+        # self.sidebar = GenerationSidebar(self)
 
-        self.splitter.addWidget(self.sidebar)
-        self.splitter.addWidget(self.widgets)
+        # self.splitter = QSplitter()
+        # self.splitter.setOrientation(Qt.Horizontal)
+        # self.widgets.addWidget(self.splitter)
 
+        # self.splitter.addWidget(self.sidebar)
+        # self.splitter.addWidget(self.generator_view)
+        # self.splitter.setSizes([300, 1100])
+
+
+        self.main_layout.addWidget(self.widgets)
         self.window_state = WindowState.MAIN_MENU
+
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        apply_styles(self)
 
 
     def switch_state(self):
@@ -232,8 +339,78 @@ class Window(QMainWindow):
         '''
         match self.window_state:
             case WindowState.MAIN_MENU:
-                self.widgets.setCurrentWidget(self.generator_view)  # temp
+                self.widgets.setCurrentWidget(self.main_interface)  # temp
             case WindowState.GENERATOR_CONFIG:
                 pass
             case WindowState.GENERATOR_VIEW:
                 pass
+
+def apply_styles(self):
+    self.setStyleSheet("""
+        QWidget {
+            background-color: #181820;
+            color: #f0f0f0;
+            font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+            font-size: 13px;
+        }
+
+        QLabel {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        QLineEdit {
+            padding: 6px 8px;
+            border: 1px solid #3a3a4f;
+            border-radius: 6px;
+            background-color: #2a2a3d;
+            color: #f0f0f0;
+        }
+
+        QLineEdit:focus {
+            border: 1px solid #F39237;
+            background-color: #2f2f4a;
+        }
+
+        QPushButton {
+            background-color: #F39237;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        QPushButton:hover {
+            background-color: #E5AE62;
+        }
+
+        QPushButton:pressed {
+            background-color: #E68339;
+        }
+
+        QSlider::groove:horizontal {
+            height: 6px;
+            background: #3a3a4f;
+            border-radius: 3px;
+        }
+
+        QSlider::handle:horizontal {
+            background: #F39237;
+            border: 1px solid #2f2f4a;
+            width: 14px;
+            height: 14px;
+            margin: -5px 0;
+            border-radius: 3px;
+        }
+
+        QSlider::sub-page:horizontal {
+            background: #F39237;
+            border-radius: 3px;
+        }
+
+        QSlider::add-page:horizontal {
+            background: #2a2a3d;
+            border-radius: 3px;
+        }
+    """)

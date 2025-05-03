@@ -65,8 +65,8 @@ class GenerationViewWidget(QOpenGLWidget):
         self.seed = seed
 
         # mouse cursor management
-        self.setMouseTracking(True)
-        self.mouse_locked = True
+        self.setMouseTracking(False)
+        self.mouse_locked = False
         self.last_mouse_pos = QCursor.pos()
         self.last_time = time.time()
         self.fps_timer = QTimer()
@@ -135,10 +135,15 @@ class GenerationViewWidget(QOpenGLWidget):
             ray_dir = Vector3D(ray_world[0], ray_world[1], ray_world[2]).normalize()
             self.world.select_block(ray_origin.data,ray_dir.data)
         if event.button() == Qt.RightButton:
-            pass # 
+            self.setMouseTracking(True)
+            self.mouse_locked = True
+            self.setCursor(Qt.BlankCursor)
 
     def mouseReleaseEvent(self, event):
-        pass
+        if event.button() == Qt.RightButton:
+            self.setMouseTracking(False)
+            self.mouse_locked = False
+            self.setCursor(Qt.ArrowCursor)
     def resizeGL(self, w, h):
         self.camera.aspect_ratio = w / h
         self.camera.apply(w, h)
@@ -271,12 +276,12 @@ class MainInterface(QWidget):
     def keyPressEvent(self, event):
         self.generator_view.camera.set_key(event.key(), True)
         match event.key():
-            case Qt.Key_Escape:
-                self.generator_view.mouse_locked = not self.generator_view.mouse_locked
-                self.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
-                self.generator_view.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
-                if self.generator_view.mouse_locked:
-                    QCursor.setPos(self.mapToGlobal(self.rect().center()))
+            # case Qt.Key_Escape:
+            #     self.generator_view.mouse_locked = not self.generator_view.mouse_locked
+            #     self.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
+            #     self.generator_view.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
+            #     if self.generator_view.mouse_locked:
+            #         QCursor.setPos(self.mapToGlobal(self.rect().center()))
             case Qt.Key_C:
                 self.generator_view.camera.state = CameraState.ZOOM
             case _:

@@ -128,7 +128,7 @@ class Camera:
         if Qt.Key_A in self.active_keys and self.active_keys[Qt.Key_A]:
             dir_matr=[dir_matr[i]+rgt_vec[i] for i in range(3)]
         # up
-        if Qt.Key_Space in self.active_keys and self.active_keys[Qt.Key_Space]:
+        if Qt.Key_Control in self.active_keys and self.active_keys[Qt.Key_Control]:
             dir_matr=[dir_matr[i]+up_vec[i] for i in range(3)]
         # down
         if Qt.Key_Shift in self.active_keys and self.active_keys[Qt.Key_Shift]:

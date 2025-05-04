@@ -10,6 +10,7 @@ from OpenGL.GLU import *
 from core.camera import Camera
 from core.enums import WindowState, CameraState
 from core.matrix_util import Vector3D,Vector4D,Matrix3D,Matrix4D
+from render.shader import Shader
 from render.world_manager import World
 from ui.interactable import MenuToConfigButton, Button, InteractableSlider
 
@@ -74,6 +75,8 @@ class GenerationViewWidget(QOpenGLWidget):
         self.fps_timer.start(1000)
         self.frame_count=0
 
+        self.shader = None
+
 
         apply_styles(self)
 
@@ -93,21 +96,44 @@ class GenerationViewWidget(QOpenGLWidget):
         glEnable(GL_DEPTH_TEST)
         print('starting to generate world')
         try:
-            self.world = World(self.seed,n_rings=10)
+            self.shader = Shader(
+                            os.path.abspath(os.path.join(
+                            os.path.dirname(__file__),
+                            "..", 
+                            "shaders","world_v.vert"
+                        )
+                        ),
+                            os.path.abspath(os.path.join(
+                            os.path.dirname(__file__),
+                            "..", 
+                            "shaders","world_f.frag"
+                        )
+                        ))
+            self.shader.use()
+            self.shader.set_mat4('projection',self.camera.proj_matr(self.width(),self.height(),True))
+            self.shader.set_mat4('view',self.camera.view_matr())
+            self.shader.set_float('time',time.perf_counter())
+        except Exception as e:
+            print('shader init went wrong: ',e)
+        try:
+            self.world = World(self.seed,self.shader,n_rings=10)
             self.world.generate_mesh()
         except Exception as e:
             print('world generation went wrong: ',e)
 
 
-    def resizeGL(self, w, h):
-        self.camera.apply(w, h)
+    # def resizeGL(self, w, h):
+        # self.camera.apply(w, h)
 
     def paintGL(self):
         self.frame_count+=1
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLoadIdentity()
-        self.camera.apply(self.width(), self.height())
+        # glLoadIdentity()
+        # self.camera.apply(self.width(), self.height())
         try:
+            self.shader.use()
+            self.shader.set_mat4('projection',self.camera.proj_matr(self.width(),self.height(),True))
+            self.shader.set_mat4('view',self.camera.view_matr())
             self.world.render()
             self.world.perf_tick()
         except Exception as e:
@@ -146,7 +172,7 @@ class GenerationViewWidget(QOpenGLWidget):
             self.setCursor(Qt.ArrowCursor)
     def resizeGL(self, w, h):
         self.camera.aspect_ratio = w / h
-        self.camera.apply(w, h)
+        # self.camera.apply(w, h)
     def normalize_mouse_pos(self,x,y):
         w,h= self.width(), self.height()
         x=(2.0 * x) / w - 1.0

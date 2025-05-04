@@ -47,14 +47,17 @@ class Camera:
             return Vector3D(0, 1, 0)
         
         return cross.normalize()
-    def proj_matr(self, width, height):
+    def proj_matr(self, width, height,flip_y=False):
+        # FIXME: flip_y is not a good solution
         aspect = width / height
         fov_rad = math.radians(self.fov)
         f = 1.0 / math.tan(fov_rad / 2)
-        
+        yf=f
+        if flip_y:
+            yf=-f
         return Matrix4D(
             f / aspect, 0, 0, 0,
-            0, f, 0, 0,
+            0, yf, 0, 0,
             0, 0, (self.far_plane + self.near_plane) / (self.near_plane - self.far_plane), (2 * self.far_plane * self.near_plane) / (self.near_plane - self.far_plane),
             0, 0, -1.0, 0
         )
@@ -151,6 +154,8 @@ class Camera:
 
     def rotate(self, dx, dy):
         self.yaw+=dx*self.sensitivity
+        # if self.yaw>360 or self.yaw <-360:
+        #     self.yaw = 0
         self.pitch+=dy*self.sensitivity
         self.pitch=max(-89.9, min(89.9, self.pitch))
 

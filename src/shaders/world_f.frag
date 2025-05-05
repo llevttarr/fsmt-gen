@@ -45,7 +45,7 @@ vec3 snowPlainsGradient(float y) {
 }
 
 void main() {
-    float normalizedY = clamp(yLevel / 20.0, 0.0, 1.0);
+    float normalizedY = clamp(yLevel / 30.0, 0.0, 1.0);
     vec3 baseColor;
     if (vRegion < 1.1) {
         baseColor = steppeGradient(normalizedY);

@@ -2,9 +2,9 @@ from core.region_gen import Region
 from core.perlin_noise import PerlinNoise
 
 
-MIN_HEIGHT = 10.0
+MIN_HEIGHT = 20.0
 #BASE_AMPLITUDE - визначає висоту гір, пагорбів чи горбів 
-`# BASE_FREQUENCY - частота появ гір, пагорбів чи горбів
+# BASE_FREQUENCY - частота появ гір, пагорбів чи горбів
 # PERSISTENCE - зменшення амплітуди появи гір(чим менше поставити, тим більше буде
 # використовуватися стовпців для створення гір, пагорбів чи горбів).
 # intensity - модифікатор для всіх параметрів.

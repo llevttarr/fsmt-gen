@@ -93,7 +93,7 @@ class Chunk:
                     obj = Object3D(os.path.abspath(os.path.join(
                             os.path.dirname(__file__),
                             "..","..", 
-                            "static","assets","tree.obj"
+                            "static","assets","spruce.obj"
                         )
                         ))
                     obj.translate(x,y,z)
@@ -130,7 +130,7 @@ class Chunk:
         and self.world.selected_block is not None \
         and (self.world.selected_block.center_x==block.center_x and self.world.selected_block.center_z==block.center_z):
             is_selected=1.0
-        info = [block.time_created,1.0,is_selected]
+        info = [block.time_created,block.region.value,is_selected]
         for v in v_list:
             self.v_list.extend(v+info)
             # self.v_list.extend(v+v_c)

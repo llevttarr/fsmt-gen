@@ -4,6 +4,7 @@ in float yLevel;
 in float vRegion;
 in float isSelected;
 in float dTime;
+in float cTime;
 
 out vec4 FragColor;
 
@@ -61,7 +62,7 @@ void main() {
     }
     float alpha = clamp(dTime / 1.5, 0.0, 1.0);
     if (isSelected > 0.9) {
-        float pulse = 0.5 * (1.0 + sin(dTime * 0.02));
+        float pulse = 0.5 * (1.0 + abs(sin((cTime)*2)));
         baseColor = mix(baseColor, vec3(1.0), pulse);
     }
     FragColor = vec4(baseColor, alpha);

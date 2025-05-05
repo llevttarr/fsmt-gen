@@ -8,6 +8,7 @@ out float vRegion;
 out float isSelected;
 out float yLevel;
 out float dTime;
+out float cTime;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -20,4 +21,5 @@ void main() {
     isSelected = aSelected;
     gl_Position = projection * view * model * vec4(aPos, 1.0);
     dTime = time - aTimeCreated;
+    cTime = time;
 }

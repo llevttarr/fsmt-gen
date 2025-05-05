@@ -4,9 +4,9 @@ class CameraState(Enum):
     ZOOM = 30.0
 
 class Region(Enum):
-    STEPPE = 1
-    FOREST = 2
-    SNOW_PLAINS = 3
+    STEPPE = 1.0
+    FOREST = 2.0
+    SNOW_PLAINS = 3.0
 
 class RotationAxis(Enum):
     X=1

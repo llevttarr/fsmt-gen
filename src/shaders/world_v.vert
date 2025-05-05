@@ -2,10 +2,10 @@
 
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in float aTimeCreated;
-layout(location = 2) in int aRegion;
-layout(location = 3) in int aSelected;
-flat out int vRegion;
-flat out int isSelected;
+layout(location = 2) in float aRegion;
+layout(location = 3) in float aSelected;
+out float vRegion;
+out float isSelected;
 out float yLevel;
 out float dTime;
 

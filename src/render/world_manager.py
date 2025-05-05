@@ -125,12 +125,12 @@ class Chunk:
             (6, 7, 3, 2),  
             (7, 4, 0, 3)   
         ]
-        is_selected=0
+        is_selected=0.1
         if self.world is not None \
         and self.world.selected_block is not None \
         and (self.world.selected_block.center_x==block.center_x and self.world.selected_block.center_z==block.center_z):
-            is_selected=1
-        info = [block.time_created,2,is_selected]
+            is_selected=1.0
+        info = [block.time_created,1.0,is_selected]
         for v in v_list:
             self.v_list.extend(v+info)
             # self.v_list.extend(v+v_c)
@@ -201,9 +201,9 @@ class Chunk:
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
         glEnableVertexAttribArray(1)
-        glVertexAttribPointer(2, 1, GL_INT, GL_FALSE, 24, ctypes.c_void_p(16))
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(16))
         glEnableVertexAttribArray(2)
-        glVertexAttribPointer(3, 1, GL_INT, GL_FALSE, 24, ctypes.c_void_p(20))
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(20))
         glEnableVertexAttribArray(3)
         # obj
         glBindVertexArray(self.o_vao)
@@ -218,9 +218,9 @@ class Chunk:
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
         glEnableVertexAttribArray(1)
-        glVertexAttribPointer(2, 1, GL_INT, GL_FALSE, 24, ctypes.c_void_p(16))
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(16))
         glEnableVertexAttribArray(2)
-        glVertexAttribPointer(3, 1, GL_INT, GL_FALSE, 24, ctypes.c_void_p(20))
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(20))
         glEnableVertexAttribArray(3)
 
         glBindVertexArray(0)

@@ -92,6 +92,7 @@ class GenerationViewWidget(QOpenGLWidget):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
         glEnable(GL_CULL_FACE)
         glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glFrontFace(GL_CCW)
         glCullFace(GL_BACK)
         glEnable(GL_DEPTH_TEST)
@@ -178,7 +179,7 @@ class GenerationViewWidget(QOpenGLWidget):
         w,h= self.width(), self.height()
         x=(2.0 * x) / w - 1.0
         y=1.0-(2.0*y)/h
-        return -x,-y
+        return x,y
     def mouseMoveEvent(self, event):
         if not self.mouse_locked:
             return

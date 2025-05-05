@@ -1,8 +1,8 @@
 #version 450 core
 
 in float yLevel;
-flat in int vRegion;
-flat in int isSelected;
+in float vRegion;
+in float isSelected;
 in float dTime;
 
 out vec4 FragColor;
@@ -44,19 +44,25 @@ vec3 snowPlainsGradient(float y) {
 }
 
 void main() {
-    float normalizedY = clamp(yLevel / 60.0, 0.0, 1.0);
+    float normalizedY = clamp(yLevel / 20.0, 0.0, 1.0);
     vec3 baseColor;
-    if (vRegion == 1) {
+    if (vRegion < 1.1) {
         baseColor = steppeGradient(normalizedY);
-    } else if (vRegion == 2) {
+    } else if (vRegion < 2.1) {
         baseColor = forestGradient(normalizedY);
-    } else {
+    } else if (vRegion < 3.1){
         baseColor = snowPlainsGradient(normalizedY);
+    }else if (vRegion < 4.1){ // tree
+        baseColor=vec3(0.1, 0.6, 0.5);
+    }else if (vRegion< 5.1){ // rock
+        baseColor=vec3(0.4, 0.4, 0.4);
+    }else{ // spruce
+        baseColor=vec3(0.1, 0.8, 0.5);
     }
-    float alpha = clamp(dTime / 100.0, 0.0, 1.0);
-    if (isSelected == 1) {
+    float alpha = clamp(dTime / 1.5, 0.0, 1.0);
+    if (isSelected > 0.9) {
         float pulse = 0.5 * (1.0 + sin(dTime * 0.02));
         baseColor = mix(baseColor, vec3(1.0), pulse);
     }
-    FragColor = vec4(baseColor, 1);
+    FragColor = vec4(baseColor, alpha);
 }

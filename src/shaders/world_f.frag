@@ -58,5 +58,5 @@ void main() {
         float pulse = 0.5 * (1.0 + sin(dTime * 0.02));
         baseColor = mix(baseColor, vec3(1.0), pulse);
     }
-    FragColor = vec4(baseColor, alpha);
+    FragColor = vec4(baseColor, 1);
 }

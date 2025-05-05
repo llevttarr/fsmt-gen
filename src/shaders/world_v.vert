@@ -2,8 +2,8 @@
 
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in float aTimeCreated;
-layout(location = 2) in float aRegion;
-layout(location = 3) in float aSelected;
+layout(location = 2) in int aRegion;
+layout(location = 3) in int aSelected;
 flat out int vRegion;
 flat out int isSelected;
 out float yLevel;
@@ -16,8 +16,8 @@ uniform float time;
 
 void main() {
     yLevel = aPos.y;
-    vRegion = int(aRegion);
-    isSelected = int(aSelected);
+    vRegion = aRegion;
+    isSelected = aSelected;
     gl_Position = projection * view * model * vec4(aPos, 1.0);
     dTime = time - aTimeCreated;
 }

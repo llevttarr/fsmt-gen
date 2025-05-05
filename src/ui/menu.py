@@ -91,6 +91,7 @@ class GenerationViewWidget(QOpenGLWidget):
     def initializeGL(self):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
         glEnable(GL_CULL_FACE)
+        glEnable(GL_BLEND)
         glFrontFace(GL_CCW)
         glCullFace(GL_BACK)
         glEnable(GL_DEPTH_TEST)
@@ -110,7 +111,7 @@ class GenerationViewWidget(QOpenGLWidget):
                         )
                         ))
             self.shader.use()
-            self.shader.set_mat4('projection',self.camera.proj_matr(self.width(),self.height(),True))
+            self.shader.set_mat4('projection',self.camera.proj_matr(self.width(),self.height()))
             self.shader.set_mat4('view',self.camera.view_matr())
             self.shader.set_float('time',time.perf_counter())
         except Exception as e:
@@ -132,7 +133,7 @@ class GenerationViewWidget(QOpenGLWidget):
         # self.camera.apply(self.width(), self.height())
         try:
             self.shader.use()
-            self.shader.set_mat4('projection',self.camera.proj_matr(self.width(),self.height(),True))
+            self.shader.set_mat4('projection',self.camera.proj_matr(self.width(),self.height()))
             self.shader.set_mat4('view',self.camera.view_matr())
             self.world.render()
             self.world.perf_tick()

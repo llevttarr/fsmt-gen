@@ -10,7 +10,7 @@ MIN_HEIGHT = 20.0
 # intensity - модифікатор для всіх параметрів.
 def get_y(coordinates, seed, region=Region.STEPPE, intensity=0.7):
     BASE_AMPLITUDE = 35
-    BASE_FREQUENCY = 0.01
+    BASE_FREQUENCY = 0.2
     PERSISTENCE = 0.5
     if region == Region.STEPPE: # можна конфігурувати.
         intensity = 0.5 

@@ -130,7 +130,7 @@ class Chunk:
         and self.world.selected_block is not None \
         and (self.world.selected_block.center_x==block.center_x and self.world.selected_block.center_z==block.center_z):
             is_selected=1.0
-        info = [block.time_created,block.region.value,is_selected]
+        info = [block.time_created,block.region.value,is_selected,y+0.1]
         for v in v_list:
             self.v_list.extend(v+info)
             # self.v_list.extend(v+v_c)
@@ -197,14 +197,16 @@ class Chunk:
         # time_created for alpha, region for color scheme, is_selected for pulsating glow (if needed)
 
         # it's probably not necesarry to give so much space for is_selected and region
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(0))
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(0))
         glEnableVertexAttribArray(0)
-        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
         glEnableVertexAttribArray(1)
-        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(16))
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(16))
         glEnableVertexAttribArray(2)
-        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(20))
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(20))
         glEnableVertexAttribArray(3)
+        glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(24))
+        glEnableVertexAttribArray(4)
         # obj
         glBindVertexArray(self.o_vao)
         glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
@@ -214,14 +216,16 @@ class Chunk:
         ilist_np = np.array(self.o_i_list, dtype=np.uint32)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilist_np.nbytes, ilist_np, self.state)
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(0))
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(0))
         glEnableVertexAttribArray(0)
-        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(12))
         glEnableVertexAttribArray(1)
-        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(16))
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(16))
         glEnableVertexAttribArray(2)
-        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(20))
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(20))
         glEnableVertexAttribArray(3)
+        glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, 28, ctypes.c_void_p(24))
+        glEnableVertexAttribArray(4)
 
         glBindVertexArray(0)
     

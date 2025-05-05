@@ -37,7 +37,14 @@ class MainMenuWidget(QWidget):
         """)
 
         self.image_label = QLabel(self)
-        pixmap = QPixmap("src/ui/static/assets/logo_fill_transparent.png")
+        pixmap = QPixmap(
+            os.path.abspath(os.path.join(
+                            os.path.dirname(__file__),
+                            "..","..",
+                            "static","assets","logo_fill_transparent.png"
+                        )
+            )
+            )
         scaled_pixmap = pixmap.scaled(400, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.image_label.setPixmap(scaled_pixmap)
         self.image_label.setAlignment(Qt.AlignCenter)
@@ -329,7 +336,14 @@ class Window(QMainWindow):
         super().__init__()
         self.setWindowTitle("Terrain Generator")
         self.setGeometry(100, 100, 1400, 860)
-        self.setWindowIcon(QIcon("src/ui/static/logo.png"))
+        self.setWindowIcon(QIcon(
+            os.path.abspath(os.path.join(
+                            os.path.dirname(__file__),
+                            "..","..",
+                            "static","logo.png"
+                        )
+            ))
+            )
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)

@@ -9,14 +9,24 @@ in float cTime;
 out vec4 FragColor;
 
 vec3 steppeGradient(float y) {
-    vec3 color1 = vec3(0.84, 1.0, 0.35);
-    vec3 color2 = vec3(1.0, 0.85, 0.27);
-    vec3 color3 = vec3(1.0, 0.53, 0.27);
+    vec3 color0 = vec3(0.72, 1, 0.55);
+    vec3 color1 = vec3(1, 0.9, 0.71);
+    vec3 color2 = vec3(0.92, 0.69, 0.44);
+    vec3 color3 = vec3(0.93, 0.58, 0.39);
+    vec3 color4 = vec3(0.68, 0.39, 0.27);
+    vec3 color5 = vec3(0.57, 0.19, 0.11);
     
-    if (y < 0.5) {
-        return mix(color1, color2, y * 2.0);
-    } else {
-        return mix(color2, color3, (y - 0.5) * 2.0);
+    if (y < 0.2) {
+        return mix(color0, color1, y * 2.0);
+    }else if (y < 0.4){
+        return mix(color1, color2, (y-0.2) * 2.0);
+    }else if (y < 0.6){
+        return mix(color2, color3, (y-0.4) * 2.0);
+    }else if (y < 0.8){
+        return mix(color3, color4, (y-0.6) * 2.0);
+    }
+     else {
+        return mix(color4, color5, (y - 0.8) * 2.0);
     }
 }
 

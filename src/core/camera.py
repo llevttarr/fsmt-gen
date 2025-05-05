@@ -48,13 +48,13 @@ class Camera:
         
         return cross.normalize()
     def proj_matr(self, width, height):
+        # FIXME: flip_y is not a good solution
         aspect = width / height
         fov_rad = math.radians(self.fov)
         f = 1.0 / math.tan(fov_rad / 2)
-        
         return Matrix4D(
             f / aspect, 0, 0, 0,
-            0, f, 0, 0,
+            0, -f, 0, 0,
             0, 0, (self.far_plane + self.near_plane) / (self.near_plane - self.far_plane), (2 * self.far_plane * self.near_plane) / (self.near_plane - self.far_plane),
             0, 0, -1.0, 0
         )
@@ -123,15 +123,15 @@ class Camera:
             dir_matr=[dir_matr[i]-frw_vec[i] for i in range(3)]
         # right
         if Qt.Key_D in self.active_keys and self.active_keys[Qt.Key_D]:
-            dir_matr=[dir_matr[i]-rgt_vec[i] for i in range(3)]
+            dir_matr=[dir_matr[i]+rgt_vec[i] for i in range(3)]
         # left
         if Qt.Key_A in self.active_keys and self.active_keys[Qt.Key_A]:
-            dir_matr=[dir_matr[i]+rgt_vec[i] for i in range(3)]
+            dir_matr=[dir_matr[i]-rgt_vec[i] for i in range(3)]
         # up
-        if Qt.Key_Control in self.active_keys and self.active_keys[Qt.Key_Control]:
+        if Qt.Key_Shift in self.active_keys and self.active_keys[Qt.Key_Shift]:
             dir_matr=[dir_matr[i]+up_vec[i] for i in range(3)]
         # down
-        if Qt.Key_Shift in self.active_keys and self.active_keys[Qt.Key_Shift]:
+        if Qt.Key_Control in self.active_keys and self.active_keys[Qt.Key_Control]:
             dir_matr=[dir_matr[i]-up_vec[i] for i in range(3)]
         # Acceleration function
         # FIXME - could be improved
@@ -150,7 +150,9 @@ class Camera:
         self.pos=[self.pos[i]+(dir_matr[i]*speed) for i in range(3)]
 
     def rotate(self, dx, dy):
-        self.yaw+=dx*self.sensitivity
+        self.yaw-=dx*self.sensitivity
+        if self.yaw>360 or self.yaw <-360:
+            self.yaw = 0
         self.pitch+=dy*self.sensitivity
         self.pitch=max(-89.9, min(89.9, self.pitch))
 

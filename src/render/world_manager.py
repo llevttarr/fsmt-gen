@@ -37,6 +37,12 @@ class Block:
         self.obj = obj
         
         self.is_final = False
+        self.model_matrix = Matrix4D(
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        )
     def update(self):
         if self.is_final:
             return
@@ -87,7 +93,7 @@ class Chunk:
                     obj = Object3D(os.path.abspath(os.path.join(
                             os.path.dirname(__file__),
                             "..","..", 
-                            "static","assets","tree.obj"
+                            "static","assets","spruce.obj"
                         )
                         ))
                     obj.translate(x,y,z)
@@ -119,14 +125,15 @@ class Chunk:
             (6, 7, 3, 2),  
             (7, 4, 0, 3)   
         ]
+        is_selected=0.1
         if self.world is not None \
         and self.world.selected_block is not None \
         and (self.world.selected_block.center_x==block.center_x and self.world.selected_block.center_z==block.center_z):
-            v_c=[1.0,1.0,1.0]
-        else:
-            v_c = self.get_v_color(y)
+            is_selected=1.0
+        info = [block.time_created,block.region.value,is_selected]
         for v in v_list:
-            self.v_list.extend(v+v_c)
+            self.v_list.extend(v+info)
+            # self.v_list.extend(v+v_c)
         for f in f_list:
             self.i_list.extend(
                 [
@@ -144,10 +151,7 @@ class Chunk:
             if not block.is_final:
                 dy = y - block.obj.y
                 block.obj.translate(0,dy,0)
-            col = None
-            if v_c==[1.0,1.0,1.0]:
-                col = v_c
-            o_v,o_vlist,o_ilist = block.obj.get_mesh(self.o_v_count,col)
+            o_v,o_vlist,o_ilist = block.obj.get_mesh(self.o_v_count,info)
             self.o_v_count+=o_v
             self.o_i_list.extend(o_ilist)
             self.o_v_list.extend(o_vlist)
@@ -187,10 +191,20 @@ class Chunk:
         ilist_np = np.array(self.i_list, dtype=np.uint32)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilist_np.nbytes, ilist_np, self.state)
 
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
-        glEnableClientState(GL_COLOR_ARRAY)
-        glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
+        # koroche
+        # 4:x,4:y,4:z,4:time_created,4:region,4:is_selected
+        # xyz for position,
+        # time_created for alpha, region for color scheme, is_selected for pulsating glow (if needed)
+
+        # it's probably not necesarry to give so much space for is_selected and region
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(16))
+        glEnableVertexAttribArray(2)
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(20))
+        glEnableVertexAttribArray(3)
         # obj
         glBindVertexArray(self.o_vao)
         glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
@@ -200,22 +214,34 @@ class Chunk:
         ilist_np = np.array(self.o_i_list, dtype=np.uint32)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, ilist_np.nbytes, ilist_np, self.state)
 
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glVertexPointer(3, GL_FLOAT, 24, ctypes.c_void_p(0))
-        glEnableClientState(GL_COLOR_ARRAY)
-        glColorPointer(3, GL_FLOAT, 24, ctypes.c_void_p(12))
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(16))
+        glEnableVertexAttribArray(2)
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(20))
+        glEnableVertexAttribArray(3)
 
         glBindVertexArray(0)
     
-    def render(self):
+    def render(self, shader):
+        model_matrix = Matrix4D(
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        )
+        shader.set_mat4("model", model_matrix)
+        shader.set_float("time", time.perf_counter())
         glBindVertexArray(self.vao)
-        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
+        # glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        # glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
         glDrawElements(GL_TRIANGLES, len(self.i_list), GL_UNSIGNED_INT, None)
         
         glBindVertexArray(self.o_vao)
-        glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.o_ebo)
+        # glBindBuffer(GL_ARRAY_BUFFER, self.o_vbo)
+        # glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.o_ebo)
         glDrawElements(GL_TRIANGLES, len(self.o_i_list), GL_UNSIGNED_INT, None)
         glBindVertexArray(0)
 
@@ -223,6 +249,7 @@ class Chunk:
 class World:
     def __init__(self, seed=1,shader=None, n_rings=10, generation_rate=2, obj_intensity=0.5, height_intensity=0.5): #generation_rate is measured in ticks
         self.seed = seed
+        self.shader = shader
         if n_rings < 1:
             raise ValueError("Number of rings cannot be less than 1")
         self.n_rings = n_rings
@@ -283,6 +310,10 @@ class World:
         if self.ticks_elapsed%self.rate==0 and len(self.chunk_scheduled)!=0:
             self.generate_chunk()
     def render(self):
+        if not self.shader:
+            return
+            
+        self.shader.use()
         if self.selected_chunk:
             self.selected_chunk.state = GL_DYNAMIC_DRAW
             self.selected_chunk.rebuild()
@@ -292,7 +323,8 @@ class World:
         for chunk in self.dynamic_chunks:
             chunk.rebuild()
         for chunk in self.chunk_list:
-            chunk.render()
+            chunk.render(self.shader)
+        self.shader.stop()
 # # # # # # #
     def intersect_check(self, ray_origin, ray_dir, bound_0, bound_max):
         t_0=(bound_0.data-ray_origin)/ray_dir

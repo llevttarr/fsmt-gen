@@ -67,14 +67,15 @@ class Object3D:
                     0,  0, 0, 1
                 )
         self.transform = r_matrix @ self.transform
-    def get_mesh(self, o_v_count, col):
+    def get_mesh(self, o_v_count,info):
         v_list = []
         i_list = []
-        if not col:
-            col = [0.3, 0.3, 0.3] #temp
+        info[1]=info[1]+3 # object region is block_region+3
+        # this is a temporary solution so that objects are more distinguishable
         for x, y, z in self.vi_list:
             vec = self.transform @ Vector4D(x, y, z, 1)
-            v_list.extend([vec[0], vec[1], vec[2]] + col)
+            v_list.extend([vec[0], vec[1], vec[2]]+info)
+            # v_list.extend([vec[0], vec[1], vec[2]] + col)
         for mesh in self.m_list:
             for face in mesh.faces:
                 i_list.extend([

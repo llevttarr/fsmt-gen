@@ -2,7 +2,7 @@
 App window and GUI manager
 '''
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QTimer, QPoint
+from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal
 from PyQt5.QtGui import QCursor, QIcon, QPixmap
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -10,6 +10,9 @@ from OpenGL.GLU import *
 from core.camera import Camera
 from core.enums import WindowState, CameraState
 from core.matrix_util import Vector3D,Vector4D,Matrix3D,Matrix4D
+from core.region_gen import init_regions
+from core.object_gen import init_objects
+from core.terrain_gen import init_heights
 from render.shader import Shader
 from render.world_manager import World
 from ui.interactable import MenuToConfigButton, Button, InteractableSlider
@@ -66,6 +69,9 @@ class MainMenuWidget(QWidget):
 
 
 class GenerationViewWidget(QOpenGLWidget):
+    gen_complete_signal = pyqtSignal(
+        bool
+    )
     def __init__(self, main_window, seed=1, fps=144):
         super().__init__()
         self.main_window = main_window
@@ -94,6 +100,22 @@ class GenerationViewWidget(QOpenGLWidget):
         print(f"fps: {fps:.2f}")
         self.frame_count = 0
         self.last_time = current_time
+    
+    def trigger_generation(self,seed=1,obj_intensity=0.05,rings=6,generation_rate=5,height_intensity=0.3):
+        self.world = None
+        self.seed=seed
+        print('generation triggered')
+        
+        rg_info=init_regions(seed,rings)
+        y_info=init_heights(seed,rings,height_intensity,rg_info)
+        obj_info=init_objects(seed,rings,obj_intensity,rg_info,y_info)
+
+        self.world = World(
+            y_info,rg_info,obj_info,seed,self.shader,n_rings=rings,obj_intensity=obj_intensity,height_intensity=height_intensity,generation_rate=generation_rate
+        )
+        self.world.generate_mesh()
+
+        self.gen_complete_signal.emit(False) # false enables widget, true disables it
 
     def initializeGL(self):
         glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
@@ -125,12 +147,9 @@ class GenerationViewWidget(QOpenGLWidget):
         except Exception as e:
             print('shader init went wrong: ',e)
         try:
-            self.world = World(self.seed,self.shader,n_rings=10)
-            self.world.generate_mesh()
+            self.trigger_generation()
         except Exception as e:
             print('world generation went wrong: ',e)
-
-
     # def resizeGL(self, w, h):
         # self.camera.apply(w, h)
 
@@ -212,6 +231,9 @@ class GenerationConfigWidget(QWidget):
         self.setLayout(layout)
 
 class GenerationSidebar(QWidget):
+    gen_signal = pyqtSignal(
+        int,float,int,int,float
+    )
 
     def __init__(self, main_window):
         super().__init__()
@@ -233,7 +255,7 @@ class GenerationSidebar(QWidget):
         self.generate_widget = QWidget()
         self.seed_generate = QVBoxLayout(self.generate_widget)
 
-        self.obj_intensity = InteractableSlider(self, "Object Intensity", (0, 100), "decimal")
+        self.obj_intensity = InteractableSlider(self, "Object Intensity", (0, 15), "decimal")
         self.rings = InteractableSlider(self, "Rings", (1, 10))
         self.generation_rate = InteractableSlider(self, "Generation Rate", (1, 10))
         self.height_intensity = InteractableSlider(self, "Height Intensity", (0, 100), "decimal")
@@ -243,7 +265,6 @@ class GenerationSidebar(QWidget):
         self.parameters_layout.addWidget(self.generation_rate)
         self.parameters_layout.addWidget(self.height_intensity)
         self.parameters_layout.setAlignment(Qt.AlignCenter)
-
         self.seed_generate.addWidget(self.input_field)
         self.seed_generate.addWidget(self.seed_input)
         self.seed_generate.addWidget(self.generate_button)
@@ -255,20 +276,21 @@ class GenerationSidebar(QWidget):
 
         #cosmetichka
         apply_styles(self)
-
+    def set_generating(self,flag):
+        self.generate_button.setEnabled(not flag)
     def generate_action(self):
         try:
-            seed = self.seed_input.text()
-            if seed:
-                print(f"generated {int(seed)}")
-            else:
-                values = [
-                    self.obj_intensity.display.toPlainText(),
-                    self.rings.display.toPlainText(),
-                    self.generation_rate.display.toPlainText(),
-                    self.height_intensity.display.toPlainText()
-                ]
-                print(values)
+            seed_inp = self.seed_input.text()
+            seed = int(seed_inp) if seed_inp else 1
+            obj_intensity = float(self.obj_intensity.display.toPlainText())
+            rings = int(self.rings.display.toPlainText())
+            generation_rate = int(self.generation_rate.display.toPlainText())
+            height_intensity = float(self.height_intensity.display.toPlainText())
+            self.set_generating(True)
+            self.gen_signal.emit(
+                seed,obj_intensity,rings,generation_rate,height_intensity
+            )
+            print(f"generation started;\nseed: {seed}\nsize:{3^rings}\no_i:{obj_intensity}\ng_r:{generation_rate}\nh_i:{height_intensity}")
         except ValueError:
             msg_box = QMessageBox(self.main_window)
             msg_box.setWindowTitle("Incorrect Seed")
@@ -298,6 +320,9 @@ class MainInterface(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_w)
         self.timer.start(1000//fps)
+
+        self.sidebar.gen_signal.connect(self.generator_view.trigger_generation)
+        self.generator_view.gen_complete_signal.connect(self.sidebar.set_generating)
 
     def update_w(self):
         if Qt.Key_C in self.generator_view.camera.active_keys:

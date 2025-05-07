@@ -7,6 +7,7 @@ distributions of objects while maintaining deterministic results.
 """
 
 # Use the correct module structure.
+from render.object_manager import Object3D
 try:
     from core.enums import Region
 except ImportError:
@@ -25,13 +26,7 @@ except ImportError:
 
 import math
 import random
-
-def init_objects(seed,n_rings,intensity):
-    '''
-    initializes objects for each block in a 3^n_rings sized world
-    returns them as a dictionary where for (x,z) => Object||None
-    '''
-    pass
+import os
 
 class SimplexNoise:
     """
@@ -193,6 +188,38 @@ def can_place(coordinates, seed, region=Region.STEPPE, intensity=0.03):
         threshold = max(0.5, min(threshold, 0.95))
 
     return normalized_noise > threshold
+
+def init_objects(seed,n_rings,intensity,rg_data,y_data):
+    '''
+    initializes objects for each block in a 3^n_rings sized world
+    returns them as a dictionary where for (x,z) => Object||None
+    '''
+    border = (1 + ((n_rings-1)*3))*2
+    obj_data = {}
+    for x in range(-border,border+1,1):
+        for z in range(-border,border+1,1):
+            rg = rg_data[(x,z)]
+            y = y_data[(x,z)]
+            if can_place((x,y,z),seed,rg,intensity):
+                #TODO: implement all objects
+                path="spruce.obj"
+                # match rg:
+                #     case Region.STEPPE:
+                #         path="rock.obj"
+                #     case Region.FOREST:
+                #         path="tree.obj"
+                #     case Region.SNOW_PLAINS:
+                #         path="spruce.obj"
+                obj_data[(x,z)]=Object3D(os.path.abspath(os.path.join(
+                    os.path.dirname(__file__),
+                    "..","..", 
+                    "static","assets",path
+                    ))
+                )
+                obj_data[(x,z)].translate(x,y,z)
+            else:
+                obj_data[(x,z)]=None
+    return obj_data
 
 
 def get_object_type(coordinates, seed, region=Region.STEPPE):

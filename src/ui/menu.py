@@ -101,14 +101,14 @@ class GenerationViewWidget(QOpenGLWidget):
         self.frame_count = 0
         self.last_time = current_time
     
-    def trigger_generation(self,seed=1,obj_intensity=0.3,rings=3,generation_rate=2,height_intensity=0.3):
+    def trigger_generation(self,seed=1,obj_intensity=0.05,rings=6,generation_rate=5,height_intensity=0.3):
         self.world = None
         self.seed=seed
         print('generation triggered')
         
-        y_info=(seed,rings,height_intensity)
         rg_info=init_regions(seed,rings)
-        obj_info=init_objects(seed,rings,obj_intensity)
+        y_info=init_heights(seed,rings,height_intensity,rg_info)
+        obj_info=init_objects(seed,rings,obj_intensity,rg_info,y_info)
 
         self.world = World(
             y_info,rg_info,obj_info,seed,self.shader,n_rings=rings,obj_intensity=obj_intensity,height_intensity=height_intensity,generation_rate=generation_rate
@@ -255,7 +255,7 @@ class GenerationSidebar(QWidget):
         self.generate_widget = QWidget()
         self.seed_generate = QVBoxLayout(self.generate_widget)
 
-        self.obj_intensity = InteractableSlider(self, "Object Intensity", (0, 100), "decimal")
+        self.obj_intensity = InteractableSlider(self, "Object Intensity", (0, 15), "decimal")
         self.rings = InteractableSlider(self, "Rings", (1, 10))
         self.generation_rate = InteractableSlider(self, "Generation Rate", (1, 10))
         self.height_intensity = InteractableSlider(self, "Height Intensity", (0, 100), "decimal")
@@ -265,7 +265,6 @@ class GenerationSidebar(QWidget):
         self.parameters_layout.addWidget(self.generation_rate)
         self.parameters_layout.addWidget(self.height_intensity)
         self.parameters_layout.setAlignment(Qt.AlignCenter)
-
         self.seed_generate.addWidget(self.input_field)
         self.seed_generate.addWidget(self.seed_input)
         self.seed_generate.addWidget(self.generate_button)

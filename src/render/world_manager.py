@@ -54,7 +54,7 @@ class Block:
             self.is_final = True
 
 class Chunk:
-    def __init__(self, seed, center_x=0, center_z=0):
+    def __init__(self,y_data,rg_data,obj_data, center_x=0, center_z=0):
         self.blocks = []
         #block size
         size = BLOCK_SIZE
@@ -86,22 +86,17 @@ class Chunk:
             for dz in [-1, 0, 1]:
                 x = center_x + dx * size
                 z = center_z + dz * size
-                y = get_y((x, z), seed)
-                rg = get_region((x,z),seed)
-                obj = None
-                if can_place((x,y,z),seed):
-                    obj = Object3D(os.path.abspath(os.path.join(
-                            os.path.dirname(__file__),
-                            "..","..", 
-                            "static","assets","spruce.obj"
-                        )
-                        ))
-                    obj.translate(x,y,z)
+                y = y_data[(x,z)]
+                rg = rg_data[(x,z)]
+                obj = obj_data[(x,z)]
                 block = Block(x, y, z, rg, obj)
                 self.blocks.append(block)
         self.rebuild()
 
     def get_v_color(self, y):
+        '''
+        DEPRECATED
+        '''
         return [0.5, (y/30), 0.5] #temp
     def render_block(self,block:Block):
         x,z = block.center_x,block.center_z
@@ -304,8 +299,7 @@ class World:
         if not self.chunk_scheduled:
             return
         x,z=self.chunk_scheduled.pop(0)
-        # print(f'generating chunk at {x}, {z}')
-        chunk = Chunk(self.seed, center_x=x, center_z=z)
+        chunk = Chunk(self.y_info,self.rg_info,self.obj_info,center_x=x, center_z=z)
         chunk.world = self
         self.chunk_list.append(chunk)
         self.dynamic_chunks.append(chunk)

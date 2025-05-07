@@ -1,11 +1,17 @@
 from core.region_gen import Region
 from core.perlin_noise import PerlinNoise
-def init_heights(seed,n_rings,intensity):
+def init_heights(seed,n_rings,intensity,rg_data):
     '''
     initializes y-levels for each block in a 3^n_rings sized world
     returns them as a dictionary where for (x,z) => y
     '''
-    pass
+    border = (1 + ((n_rings-1)*3))*2
+    y_data = {}
+    for x in range(-border,border+1,1):
+        for z in range(-border,border+1,1):
+            rg = rg_data[(x,z)]
+            y_data[(x,z)]=get_y((x,z),seed,rg,intensity)
+    return y_data
 
 MIN_HEIGHT = 20.0
 #BASE_AMPLITUDE - визначає висоту гір, пагорбів чи горбів 

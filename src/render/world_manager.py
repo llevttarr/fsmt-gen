@@ -251,7 +251,7 @@ class Chunk:
 
 
 class World:
-    def __init__(self, seed=1,shader=None, n_rings=10, generation_rate=2, obj_intensity=0.5, height_intensity=0.5): #generation_rate is measured in ticks
+    def __init__(self, y_info,rg_info,obj_info, seed=1,shader=None, n_rings=10, generation_rate=2, obj_intensity=0.5, height_intensity=0.5): #generation_rate is measured in ticks
         self.seed = seed
         self.shader = shader
         if n_rings < 1:
@@ -268,6 +268,10 @@ class World:
         self.dynamic_chunks = []
         self.chunk_list = []
         # self.view_type = ObjectViewType.DEFAULT
+
+        self.y_info = y_info
+        self.rg_info = rg_info
+        self.obj_info = obj_info
 
         self.selected_block = None
         self.selected_chunk = None

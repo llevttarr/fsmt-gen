@@ -26,6 +26,12 @@ except ImportError:
 import math
 import random
 
+def init_objects(seed,n_rings,intensity):
+    '''
+    initializes objects for each block in a 3^n_rings sized world
+    returns them as a dictionary where for (x,z) => Object||None
+    '''
+    pass
 
 class SimplexNoise:
     """

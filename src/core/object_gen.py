@@ -20,9 +20,11 @@ except ImportError:
         # Final fallback - create a simple enum.
         from enum import Enum
         class Region(Enum):
-            STEPPE = 1
-            FOREST = 2
-            SNOW_PLAINS = 3
+            STEPPE = 0
+            FOREST = 1
+            HILLS = 2
+            MOUNTAINS = 3
+            SNOW_PLAINS = 4
 
 import math
 import random
@@ -170,9 +172,9 @@ def can_place(coordinates, seed, region=Region.STEPPE, intensity=0.03):
     normalized_noise = (combined_noise + 1) * 0.5
 
     region_multipliers = {
-        Region.STEPPE: 0.85,
-        Region.FOREST: 1.85,
-        Region.SNOW_PLAINS: 1.85
+        Region.STEPPE: 0.4,
+        Region.FOREST: 1.9,
+        Region.SNOW_PLAINS: 1.6
     }
 
     if region == Region.STEPPE:
@@ -206,13 +208,17 @@ def init_objects(seed,n_rings,intensity,rg_data,y_data):
             if can_place((x,y,z),seed,rg,intensity):
                 #TODO: implement all objects
                 path="spruce.obj"
-                # match rg:
-                #     case Region.STEPPE:
-                #         path="rock.obj"
-                #     case Region.FOREST:
-                #         path="tree.obj"
-                #     case Region.SNOW_PLAINS:
-                #         path="spruce.obj"
+                match rg:
+                    case Region.HILLS:
+                        path="tree.obj"
+                    case Region.STEPPE:
+                        path="bush.obj"
+                    case Region.FOREST:
+                        path="spruce.obj"
+                    case Region.MOUNTAINS:
+                        path="rock.obj"
+                    case Region.SNOW_PLAINS:
+                        path="spruce.obj"
                 obj_data[(x,z)]=Object3D(os.path.abspath(os.path.join(
                     os.path.dirname(__file__),
                     "..","..", 

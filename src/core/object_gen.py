@@ -238,23 +238,6 @@ def init_objects(seed, n_rings, intensity, rg_data, y_data):
             if intensity == 0:
                 obj_data[(x,z)] = None
                 continue
-<<<<<<< Updated upstream
-            if can_place((x,y,z),seed,rg,intensity):
-                #TODO: implement all objects
-                path="spruce.obj"
-                match rg:
-                    case Region.HILLS:
-                        path="tree.obj"
-                    case Region.STEPPE:
-                        path="bush.obj"
-                    case Region.FOREST:
-                        path="spruce.obj"
-                    case Region.MOUNTAINS:
-                        path="rock.obj"
-                    case Region.SNOW_PLAINS:
-                        path="spruce.obj"
-                obj_data[(x,z)]=Object3D(os.path.abspath(os.path.join(
-=======
                 
             if can_place((x,y,z), seed, rg, intensity):
                 # Map regions to specific object models
@@ -274,7 +257,6 @@ def init_objects(seed, n_rings, intensity, rg_data, y_data):
                 
                 # Full path to the model file
                 full_path = os.path.abspath(os.path.join(
->>>>>>> Stashed changes
                     os.path.dirname(__file__),
                     "..","..", 
                     "static","assets", path

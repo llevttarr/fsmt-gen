@@ -128,10 +128,10 @@ class Camera:
         if 65 in self.active_keys and self.active_keys[65]:
             dir_matr=[dir_matr[i]-rgt_vec[i] for i in range(3)]
         # up
-        if 17 in self.active_keys and self.active_keys[17]:
+        if 16 in self.active_keys and self.active_keys[16]:
             dir_matr=[dir_matr[i]+up_vec[i] for i in range(3)]
         # down
-        if 16 in self.active_keys and self.active_keys[16]:
+        if 17 in self.active_keys and self.active_keys[17]:
             dir_matr=[dir_matr[i]-up_vec[i] for i in range(3)]
         # Acceleration function
         # FIXME - could be improved

@@ -200,6 +200,9 @@ def init_objects(seed,n_rings,intensity,rg_data,y_data):
         for z in range(-border,border+1,1):
             rg = rg_data[(x,z)]
             y = y_data[(x,z)]
+            if intensity == 0:
+                obj_data[(x,z)]=None
+                continue
             if can_place((x,y,z),seed,rg,intensity):
                 #TODO: implement all objects
                 path="spruce.obj"

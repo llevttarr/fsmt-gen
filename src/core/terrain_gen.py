@@ -13,21 +13,42 @@ def init_heights(seed,n_rings,intensity,rg_data):
             y_data[(x,z)]=get_y((x,z),seed,rg,intensity)
     return y_data
 
-MIN_HEIGHT = 20.0
 #BASE_AMPLITUDE - визначає висоту гір, пагорбів чи горбів 
 # BASE_FREQUENCY - частота появ гір, пагорбів чи горбів
 # PERSISTENCE - зменшення амплітуди появи гір(чим менше поставити, тим більше буде
 # використовуватися стовпців для створення гір, пагорбів чи горбів).
 # intensity - модифікатор для всіх параметрів.
-def get_y(coordinates, seed, region=Region.STEPPE, intensity=0.7):
+def get_y(coordinates, seed, region, intensity=0.7):
+    MIN_HEIGHT = 20.0
     BASE_AMPLITUDE = 35
     BASE_FREQUENCY = 0.2
     PERSISTENCE = 0.5
-    if region == Region.STEPPE: # можна конфігурувати.
+    if region == Region.STEPPE or region == Region.SNOW_PLAINS:
         intensity = 0.5 
-        BASE_AMPLITUDE = 35.0
+        BASE_AMPLITUDE = 20.0
         BASE_FREQUENCY = 0.01
         PERSISTENCE = 0.5
+    elif region == Region.MOUNTAINS:
+        MIN_HEIGHT = 25.0
+        BASE_AMPLITUDE = 28.0
+        BASE_FREQUENCY = 0.8
+        PERSISTENCE = 0.8
+    elif region == Region.FOREST:
+        BASE_AMPLITUDE = 20.0
+        BASE_FREQUENCY = 0.01
+        PERSISTENCE = 0.5
+    elif region == Region.HILLS:
+        MIN_HEIGHT = 22.0
+        BASE_AMPLITUDE = 22.0
+        BASE_FREQUENCY = 0.06
+        PERSISTENCE = 0.5
+
+
+    
+    
+
+
+         
     noise_gen = PerlinNoise(seed)
     x, z = coordinates
     y = noise_gen.noise(x * BASE_FREQUENCY, z * BASE_FREQUENCY) * BASE_AMPLITUDE

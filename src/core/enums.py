@@ -4,9 +4,11 @@ class CameraState(Enum):
     ZOOM = 30.0
 
 class Region(Enum):
-    STEPPE = 1.0
-    FOREST = 2.0
-    SNOW_PLAINS = 3.0
+    STEPPE = 0
+    FOREST = 1
+    HILLS = 2
+    MOUNTAINS = 3
+    SNOW_PLAINS = 4
 
 class RotationAxis(Enum):
     X=1
@@ -27,3 +29,8 @@ class WindowState(Enum):
     GENERATOR_CONFIG = 2
     GENERATOR_VIEW = 3
     INFO_PAGE = 4
+
+if __name__ == "__main__":
+    m = Region(1)
+    l = Region.STEPPE
+    print(m)

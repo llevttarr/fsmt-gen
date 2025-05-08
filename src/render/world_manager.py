@@ -6,7 +6,6 @@ import os
 
 from core.enums import Region
 from core.terrain_gen import get_y
-from core.region_gen import get_region
 from core.object_gen import can_place
 from core.matrix_util import Vector3D,Vector4D,Matrix3D,Matrix4D
 

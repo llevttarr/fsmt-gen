@@ -118,7 +118,7 @@ class GenerationViewWidget(QOpenGLWidget):
         self.gen_complete_signal.emit(False) # false enables widget, true disables it
 
     def initializeGL(self):
-        glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
+        # glClearColor(0.4, 0.7, 1.0, 1.0) #temp color
         glEnable(GL_CULL_FACE)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -334,22 +334,23 @@ class MainInterface(QWidget):
 
    
     def keyPressEvent(self, event):
-        self.generator_view.camera.set_key(event.key(), True)
-        match event.key():
+        self.generator_view.camera.set_key(event.nativeVirtualKey(), True)
+        print(f"input {event.nativeVirtualKey()}")
+        match event.nativeVirtualKey():
             # case Qt.Key_Escape:
             #     self.generator_view.mouse_locked = not self.generator_view.mouse_locked
             #     self.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
             #     self.generator_view.setCursor(Qt.BlankCursor if self.generator_view.mouse_locked else Qt.ArrowCursor)
             #     if self.generator_view.mouse_locked:
             #         QCursor.setPos(self.mapToGlobal(self.rect().center()))
-            case Qt.Key_C:
+            case 67:
                 self.generator_view.camera.state = CameraState.ZOOM
             case _:
                 return
     
     def keyReleaseEvent(self, event):
-        self.generator_view.camera.set_key(event.key(), False)
-        if event.key()==Qt.Key_C:
+        self.generator_view.camera.set_key(event.nativeVirtualKey(), False)
+        if event.nativeVirtualKey()==67:
             self.generator_view.camera.state = CameraState.DEFAULT
 
   

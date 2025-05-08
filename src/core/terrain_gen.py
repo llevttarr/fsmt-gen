@@ -31,8 +31,8 @@ def get_y(coordinates, seed, region, intensity=0.7):
     elif region == Region.MOUNTAINS:
         MIN_HEIGHT = 25.0
         BASE_AMPLITUDE = 28.0
-        BASE_FREQUENCY = 0.8
-        PERSISTENCE = 0.8
+        BASE_FREQUENCY = 0.06
+        PERSISTENCE = 0.2
     elif region == Region.FOREST:
         BASE_AMPLITUDE = 20.0
         BASE_FREQUENCY = 0.01
@@ -41,7 +41,7 @@ def get_y(coordinates, seed, region, intensity=0.7):
         MIN_HEIGHT = 22.0
         BASE_AMPLITUDE = 22.0
         BASE_FREQUENCY = 0.06
-        PERSISTENCE = 0.5
+        PERSISTENCE = 1.5
 
 
     

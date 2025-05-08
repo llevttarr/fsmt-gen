@@ -116,22 +116,22 @@ class Camera:
 
         # if a few keys are pressed, some cancel out
         # forwards
-        if Qt.Key_W in self.active_keys and self.active_keys[Qt.Key_W]:
+        if 87 in self.active_keys and self.active_keys[87]:
             dir_matr=[dir_matr[i]+frw_vec[i] for i in range(3)]
         # backwards
-        if Qt.Key_S in self.active_keys and self.active_keys[Qt.Key_S]:
+        if 83 in self.active_keys and self.active_keys[83]:
             dir_matr=[dir_matr[i]-frw_vec[i] for i in range(3)]
         # right
-        if Qt.Key_D in self.active_keys and self.active_keys[Qt.Key_D]:
+        if 68 in self.active_keys and self.active_keys[68]:
             dir_matr=[dir_matr[i]+rgt_vec[i] for i in range(3)]
         # left
-        if Qt.Key_A in self.active_keys and self.active_keys[Qt.Key_A]:
+        if 65 in self.active_keys and self.active_keys[65]:
             dir_matr=[dir_matr[i]-rgt_vec[i] for i in range(3)]
         # up
-        if Qt.Key_Shift in self.active_keys and self.active_keys[Qt.Key_Shift]:
+        if 17 in self.active_keys and self.active_keys[17]:
             dir_matr=[dir_matr[i]+up_vec[i] for i in range(3)]
         # down
-        if Qt.Key_Control in self.active_keys and self.active_keys[Qt.Key_Control]:
+        if 16 in self.active_keys and self.active_keys[16]:
             dir_matr=[dir_matr[i]-up_vec[i] for i in range(3)]
         # Acceleration function
         # FIXME - could be improved

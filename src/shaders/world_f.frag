@@ -53,6 +53,17 @@ vec3 snowPlainsGradient(float y) {
         return mix(color2, color3, (y - 0.5) * 2.0);
     }
 }
+vec3 mountainsGradient(float y) {
+    vec3 color1 = vec3(0.1, 0.1, 0.1);
+    vec3 color2 = vec3(0.4, 0.4, 0.4);
+    vec3 color3 = vec3(0.7, 0.7, 0.7);
+    
+    if (y < 0.5) {
+        return mix(color1, color2, y * 2.0);
+    } else {
+        return mix(color2, color3, (y - 0.5) * 2.0);
+    }
+}
 
 void main() {
     float normalizedY = clamp(yLevel / 30.0, 0.0, 1.0);
@@ -63,12 +74,17 @@ void main() {
         baseColor = forestGradient(normalizedY);
     } else if (vRegion < 3.1){
         baseColor = snowPlainsGradient(normalizedY);
-    }else if (vRegion < 4.1){ // tree
+    }else if (vRegion < 4.1){
+        baseColor = mountainsGradient(normalizedY);
+    }
+    else if (vRegion < 4.1){ // tree
         baseColor=vec3(0.1, 0.6, 0.5);
-    }else if (vRegion< 5.1){ // rock
+    }else if (vRegion< 5.1){ // temp
         baseColor=vec3(0.4, 0.4, 0.4);
-    }else{ // spruce
+    }else if (vRegion<6.1){ // spruce
         baseColor=vec3(0.1, 0.8, 0.5);
+    }else{ // rock
+        baseColor=vec3(0.4, 0.4, 0.4);
     }
     float alpha = clamp(dTime / 1.5, 0.0, 1.0);
     if (isSelected > 0.9) {
